@@ -39,5 +39,13 @@ lerna-debug.log*
 .env.local
 .env.*.local
 
+# Ignore all markdown files except README.md
+*.md
+!README.md
+
+# Ignore all summary files except README.md
+*SUMMARY.md
+!README.md
+
 # Uploads
 /uploads
