@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { User, UserDocument } from '../schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, STATUS_CODES, createResponse } from '../common/messages';
 
 @Injectable()
 export class AuthService {
@@ -63,11 +64,12 @@ export class AuthService {
     // For testing: return OTP in response (REMOVE IN PRODUCTION)
     const isDevelopment = this.configService.get('NODE_ENV') === 'development';
 
-    return {
-      status: 'success',
-      msg: 'OTP sent successfully',
-      ...(isDevelopment && { otp }), // Only include OTP in development
-    };
+    return createResponse(
+      'success',
+      SUCCESS_MESSAGES.OTP_SENT,
+      isDevelopment && { otp },
+      STATUS_CODES.SUCCESS,
+    );
   }
 
   /**
@@ -100,16 +102,16 @@ export class AuthService {
     const user = await this.userModel.findOne({ 'auth.mobile_number': mobile_number });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException(ERROR_MESSAGES.USER_NOT_FOUND);
     }
 
     // Check OTP validity
     if (user.auth.otp !== otp) {
-      throw new UnauthorizedException('Invalid OTP');
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_OTP);
     }
 
     if (new Date() > user.auth.otp_expiry) {
-      throw new UnauthorizedException('OTP expired');
+      throw new UnauthorizedException(ERROR_MESSAGES.OTP_EXPIRED);
     }
 
     // Update user
@@ -126,12 +128,12 @@ export class AuthService {
       token = this.jwtService.sign(payload);
     }
 
-    return {
-      status: 'success',
-      msg: 'OTP verified',
-      token,
-      user_id: user._id,
-    };
+    return createResponse(
+      'success',
+      SUCCESS_MESSAGES.OTP_VERIFIED,
+      { token, user_id: user._id },
+      STATUS_CODES.SUCCESS,
+    );
   }
 
   async validateUser(userId: string): Promise<UserDocument> {
