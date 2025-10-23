@@ -5,9 +5,21 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000/api/v1", "type": "string" },
-    { "key": "token", "value": "", "type": "string" },
-    { "key": "userId", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "https://ontoyouserver.vercel.app/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -17,18 +29,42 @@
           "name": "Login (Send OTP)",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"mobile_number\": \"9876543210\"\n}" },
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile_number\": \"9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
           }
         },
         {
           "name": "Verify OTP",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"mobile_number\": \"9876543210\",\n  \"otp\": \"123456\"\n}" },
-            "url": { "raw": "{{baseUrl}}/auth/verify", "host": ["{{baseUrl}}"], "path": ["auth", "verify"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile_number\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify"]
+            }
           }
         }
       ]
@@ -41,7 +77,11 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/presets", "host": ["{{baseUrl}}"], "path": ["presets"] }
+            "url": {
+              "raw": "{{baseUrl}}/presets",
+              "host": ["{{baseUrl}}"],
+              "path": ["presets"]
+            }
           }
         },
         {
@@ -49,14 +89,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"phone_number\": \"9876543210\",\n  \"display_name\": \"Ayush V Nair\",\n+  \"profile_photo_url\": \"https://cdn.ontoyou.com/avatars/default.jpg\",\n  \"name\": \"Ayush V Nair\",\n  \"dob\": \"2002-11-20\",\n  \"short_bio\": \"Traveler and foodie\",\n  \"gender\": \"Male\",\n  \"preferred_gender\": [\"Female\"],\n  \"preferred_age_range\": { \"min\": 20, \"max\": 26 },\n  \"age\": 23,\n  \"languages\": [\"English\", \"Malayalam\"],\n  \"interests\": [\"Movies\", \"Travel\", \"Food & Café Hopping\"],\n  \"personality_traits\": [\"friendly\", \"adventurous\"],\n  \"traits\": {\n    \"extroversion\": 7,\n    \"introversion\": 3,\n    \"agreeableness\": 8,\n    \"openness\": 9\n  },\n  \"boundaries\": {\n    \"talk_intensity\": \"Moderate\",\n    \"silence_tolerance\": \"High\",\n    \"emotional_openness\": \"Medium\"\n  },\n  \"boundaries_list\": [\"no smoking\", \"no pets\"],\n  \"preferences\": {\n    \"duration\": [\"Short\", \"Medium\"],\n    \"frequency\": [\"Occasional\"]\n  },\n  \"locations\": [\"Koramangala\", \"Indiranagar\"],\n  \"city\": \"Bangalore\",\n  \"coordinates\": [77.5946, 12.9716],\n  \"distance_limit_km\": 15,\n  \"activity_score\": 5,\n  \"freshness_score\": 1.0,\n  \"custom_note\": \"Looking for someone fun\",\n  \"created_at\": \"2025-10-23T10:00:00Z\",\n  \"last_active\": \"2025-10-23T10:00:00Z\"\n}"
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"display_name\": \"Ayush V Nair\",\n  \"profile_photo\": \"https://cdn.ontoyou.com/avatars/default.jpg\",\n  \"short_bio\": \"Traveler and foodie\",\n  \"gender\": \"Male\",\n  \"dob\": \"2002-11-20\",\n  \"interests\": [\"Movies\", \"Travel\", \"Food & Café Hopping\"],\n  \"preset_locations\": [{\"id\": \"loc_kora\", \"name\": \"Koramangala Meetup Spot\"}, {\"id\": \"loc_ind\", \"name\": \"Indiranagar Meetup Spot\"}],\n  \"availability\": {\"Monday\": [\"Morning\", \"Evening\"], \"Friday\": [\"Evening\"]},\n  \"preferred_gender\": \"Female\",\n  \"preferred_age_range\": {\"min\": 20, \"max\": 26},\n  \"personality_traits\": [\"friendly\", \"adventurous\"],\n  \"boundaries\": [\"no smoking\", \"no pets\"],\n  \"custom_note\": \"Looking for someone fun\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/profile/create", "host": ["{{baseUrl}}"], "path": ["profile", "create"] }
+            "url": {
+              "raw": "{{baseUrl}}/profile/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", "create"]
+            }
           }
         },
         {
@@ -64,7 +114,11 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["profile", "{{userId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/profile/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", "{{userId}}"]
+            }
           }
         },
         {
@@ -72,22 +126,41 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"bio\": \"Updated bio\",\n  \"city\": \"Mumbai\"\n}"
+              "raw": "{\n  \"short_bio\": \"Updated bio\",\n  \"preset_locations\": [{\"id\": \"loc_kora\", \"name\": \"Koramangala Meetup Spot\"}]\n}"
             },
-            "url": { "raw": "{{baseUrl}}/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["profile", "{{userId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/profile/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", "{{userId}}"]
+            }
           }
         },
         {
           "name": "Delete Profile",
           "request": {
             "method": "DELETE",
-            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
-            "url": { "raw": "{{baseUrl}}/profile/{{userId}}", "host": ["{{baseUrl}}"], "path": ["profile", "{{userId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", "{{userId}}"]
+            }
           }
         }
       ]
@@ -100,19 +173,32 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/banners", "host": ["{{baseUrl}}"], "path": ["banners"] }
+            "url": {
+              "raw": "{{baseUrl}}/banners",
+              "host": ["{{baseUrl}}"],
+              "path": ["banners"]
+            }
           }
         },
         {
           "name": "Add Banner",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Weekend Meetup Special\",\n  \"image_url\": \"https://cdn.ontoyou.com/banners/weekend.jpg\",\n  \"target_url\": \"https://ontoyou.com/offer/weekend\",\n  \"active\": true\n}"
             },
-            "url": { "raw": "{{baseUrl}}/banners", "host": ["{{baseUrl}}"], "path": ["banners"] }
+            "url": {
+              "raw": "{{baseUrl}}/banners",
+              "host": ["{{baseUrl}}"],
+              "path": ["banners"]
+            }
           }
         },
         {
@@ -120,7 +206,11 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/banners/{{bannerId}}", "host": ["{{baseUrl}}"], "path": ["banners", "{{bannerId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/banners/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["banners", "{{bannerId}}"]
+            }
           }
         }
       ]
@@ -132,36 +222,63 @@
           "name": "Initiate Rental",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"coordinates\": [77.59, 12.97]\n  },\n  \"preferred_age\": { \"min\": 20, \"max\": 26 },\n  \"preferred_gender\": [\"Female\"],\n  \"time_slot\": { \"start\": \"18:00\", \"end\": \"20:00\" },\n  \"duration_hours\": 2\n}"
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"preset_location_id\": \"loc_kora\",\n    \"preset_location_name\": \"Koramangala Meetup Spot\"\n  },\n  \"preferred_age\": {\"min\": 20, \"max\": 26},\n  \"preferred_gender\": [\"Female\"],\n  \"time_slot\": {\"start\": \"18:00\", \"end\": \"20:00\"},\n  \"duration_hours\": 2\n}"
             },
-            "url": { "raw": "{{baseUrl}}/rentals/initiate", "host": ["{{baseUrl}}"], "path": ["rentals", "initiate"] }
+            "url": {
+              "raw": "{{baseUrl}}/rentals/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["rentals", "initiate"]
+            }
           }
         },
         {
           "name": "Confirm Rental",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"renter_id\": \"{{userId}}\",\n  \"host_id\": \"HOST_USER_ID\",\n  \"scheduled_at\": \"2025-10-25T17:00:00Z\",\n  \"duration_hours\": 2,\n  \"credits_used\": 2,\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"coordinates\": [77.59, 12.97]\n  }\n}"
+              "raw": "{\n  \"renter_id\": \"{{userId}}\",\n  \"host_id\": \"HOST_USER_ID\",\n  \"scheduled_at\": \"2025-10-25T17:00:00Z\",\n  \"duration_hours\": 2,\n  \"credits_used\": 2,\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"preset_location_id\": \"loc_kora\",\n    \"preset_location_name\": \"Koramangala Meetup Spot\"\n  }\n}"
             },
-            "url": { "raw": "{{baseUrl}}/rentals/confirm", "host": ["{{baseUrl}}"], "path": ["rentals", "confirm"] }
+            "url": {
+              "raw": "{{baseUrl}}/rentals/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["rentals", "confirm"]
+            }
           }
         },
         {
           "name": "Verify Rental OTP",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"rental_id\": \"RENTAL_ID\",\n  \"user_id\": \"{{userId}}\",\n  \"otp\": \"1234\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/rentals/otp-verify", "host": ["{{baseUrl}}"], "path": ["rentals", "otp-verify"] }
+            "url": {
+              "raw": "{{baseUrl}}/rentals/otp-verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["rentals", "otp-verify"]
+            }
           }
         }
       ]
@@ -179,41 +296,84 @@
               "host": ["{{baseUrl}}"],
               "path": ["matches", "top"],
               "query": [
-                { "key": "user_id", "value": "{{userId}}" },
-                { "key": "city", "value": "Bangalore" }
+                {
+                  "key": "user_id",
+                  "value": "{{userId}}"
+                },
+                {
+                  "key": "city",
+                  "value": "Bangalore"
+                }
               ]
             }
           }
         }
       ]
-    }
-    ,
+    },
     {
       "name": "Locations",
       "item": [
         {
-          "name": "Get Locations",
+          "name": "Get Districts (default)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/locations?city=Bangalore", "host": ["{{baseUrl}}"], "path": ["locations"], "query": [{ "key": "city", "value": "Bangalore" }] }
+            "url": {
+              "raw": "{{baseUrl}}/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations"]
+            }
           }
         },
         {
-          "name": "Add Location",
+          "name": "Get Locations by District",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/locations?district=Kochi",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations"],
+              "query": [
+                {
+                  "key": "district",
+                  "value": "Kochi"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Location (admin)",
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Koramangala Meetup Spot\",\n  \"coordinates\": [77.6261, 12.9352],\n  \"spot_type\": \"cafe\",\n  \"description\": \"Cozy cafe with outdoor seating\",\n  \"city\": \"Bangalore\"\n}" },
-            "url": { "raw": "{{baseUrl}}/locations", "host": ["{{baseUrl}}"], "path": ["locations"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"district\": \"Kochi\",\n  \"place_name\": \"Lulu Mall\",\n  \"preset_location_id\": \"loc_lulu\",\n  \"coordinates\": [77.0879, 9.9667],\n  \"spot_type\": \"mall\",\n  \"description\": \"Popular shopping mall\",\n  \"city\": \"Kochi\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations"]
+            }
           }
         },
         {
-          "name": "Delete Location",
+          "name": "Delete Location (admin)",
           "request": {
             "method": "DELETE",
-            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
-            "url": { "raw": "{{baseUrl}}/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["locations", "{{locationId}}"] }
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/locations/loc_lulu",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "loc_lulu"]
+            }
           }
         }
       ]

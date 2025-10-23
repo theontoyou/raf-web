@@ -13,99 +13,108 @@ export class MatchesService {
     age_min?: number;
     age_max?: number;
     gender?: string;
+    preset_location_id?: string;
+    preset_location_name?: string;
   }) {
     const { user_id, city, age_min, age_max, gender } = query;
 
-    // Get current user to understand preferences
-    const currentUser = await this.userModel.findById(user_id);
-    if (!currentUser) {
-      return {
-        status: 'error',
-        msg: 'User not found',
-        matches: [],
-      };
+    // Get current user to understand preferences (if provided)
+    let currentUser: any = null;
+    if (user_id) {
+      currentUser = await this.userModel.findById(user_id);
+      if (!currentUser) {
+        return {
+          status: 'error',
+          msg: 'User not found',
+          matches: [],
+        };
+      }
     }
 
     // Build match criteria
-    const matchCriteria: any = {
-      _id: { $ne: user_id },
-    };
+    const matchCriteria: any = {};
+    if (user_id) matchCriteria._id = { $ne: user_id };
 
     // Apply filters
     if (city) {
       matchCriteria['profile.city'] = city;
-    } else if (currentUser.profile?.city) {
+    } else if (currentUser && currentUser.profile?.city) {
       matchCriteria['profile.city'] = currentUser.profile.city;
+    } else {
+      // City is mandatory to scope matches if we don't have a user context
+      return { status: 'error', msg: 'City is required', matches: [] };
     }
 
     if (gender) {
       matchCriteria['profile.gender'] = gender;
-    } else if (currentUser.profile?.preferred_gender?.length) {
+    } else if (currentUser?.profile?.preferred_gender?.length) {
       matchCriteria['profile.gender'] = { $in: currentUser.profile.preferred_gender };
     }
 
     if (age_min && age_max) {
       matchCriteria['profile.age'] = { $gte: age_min, $lte: age_max };
-    } else if (currentUser.profile?.age_range) {
+    } else if (currentUser?.profile?.age_range) {
       matchCriteria['profile.age'] = {
         $gte: currentUser.profile.age_range.min,
         $lte: currentUser.profile.age_range.max,
       };
     }
 
-    // Find matches with geospatial query if location available
-    let matches;
-    if (currentUser.profile?.location?.coordinates) {
-      matches = await this.userModel
-        .find({
-          ...matchCriteria,
-          'profile.location': {
-            $near: {
-              $geometry: {
-                type: 'Point',
-                coordinates: currentUser.profile.location.coordinates,
-              },
-              $maxDistance: (currentUser.profile?.distance_limit_km || 15) * 1000, // Convert to meters
-            },
-          },
-        })
-        .limit(20)
-        .select('profile.name profile.age profile.images profile.location profile.bio interests');
-    } else {
-      matches = await this.userModel
-        .find(matchCriteria)
-        .limit(20)
-        .select('profile.name profile.age profile.images profile.location profile.bio interests');
+    // Find matches. We no longer use geospatial queries; instead filter by preset locations if provided.
+    if (query.preset_location_id) {
+      matchCriteria['preset_locations.id'] = query.preset_location_id;
+    } else if (query.preset_location_name) {
+      matchCriteria['preset_locations.name'] = query.preset_location_name;
     }
 
-    // Calculate match scores and format results
-    const matchResults = matches.map((match) => {
-      const distance = currentUser.profile?.location?.coordinates
-        ? this.calculateDistance(
-            currentUser.profile.location.coordinates,
-            match.profile?.location?.coordinates || [0, 0],
-          )
-        : 0;
+    const matches = await this.userModel
+      .find(matchCriteria)
+      .limit(20)
+      .select('profile.name profile.age profile.images profile.bio interests preset_locations');
 
-      return {
+    // Format results (no distance calculation)
+    const matchResults = matches.map((match) => ({
+      user_id: match._id,
+      name: match.profile?.name,
+      age: match.profile?.age,
+      image: match.profile?.images?.[0] || '',
+      bio: match.profile?.bio || '',
+      interests: match.interests || [],
+      preset_locations: match.preset_locations || [],
+    }));
+
+    if (matchResults.length === 0) {
+      // No exact matches for the given criteria — fall back to returning people from the same city
+      const cityOnlyCriteria: any = { 'profile.city': matchCriteria['profile.city'] };
+      if (user_id) cityOnlyCriteria._id = { $ne: user_id };
+
+      const cityMatches = await this.userModel
+        .find(cityOnlyCriteria)
+        .limit(20)
+        .select('profile.name profile.age profile.images profile.bio interests preset_locations');
+
+      const fallbackResults = cityMatches.map((match) => ({
         user_id: match._id,
         name: match.profile?.name,
         age: match.profile?.age,
-        distance_km: Math.round(distance),
         image: match.profile?.images?.[0] || '',
         bio: match.profile?.bio || '',
         interests: match.interests || [],
-      };
-    });
+        preset_locations: match.preset_locations || [],
+      }));
 
-    // Sort by distance
-    matchResults.sort((a, b) => a.distance_km - b.distance_km);
+      if (fallbackResults.length === 0) {
+        return {
+          status: 'error',
+          msg: 'No matches found',
+          matches: [],
+        };
+      }
 
-    if (matchResults.length === 0) {
       return {
-        status: 'error',
-        msg: 'No matches found',
-        matches: [],
+        status: 'success',
+        msg: 'No exact matches — returning users from the same city',
+        matches: fallbackResults,
       };
     }
 
@@ -116,26 +125,5 @@ export class MatchesService {
   }
 
   // Helper function to calculate distance
-  private calculateDistance(coords1: number[], coords2: number[]): number {
-    const [lon1, lat1] = coords1;
-    const [lon2, lat2] = coords2;
-
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLon = this.toRad(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) *
-        Math.cos(this.toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private toRad(value: number): number {
-    return (value * Math.PI) / 180;
-  }
+  // distance calculation removed - matches are filtered by preset locations
 }

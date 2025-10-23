@@ -3,106 +3,108 @@ import {
   IsNotEmpty,
   IsArray,
   IsOptional,
+  MaxLength,
+  IsDateString,
+  ArrayMinSize,
+  ValidateNested,
   IsObject,
   IsNumber,
   Min,
   Max,
-  MaxLength,
-  IsDateString,
-  IsBoolean,
 } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
-export class CreateProfileDto {
+class PresetLocationDto {
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+
   @IsString()
   @IsNotEmpty()
   name: string;
+}
 
-  @IsDateString()
+export class CreateProfileDto {
+  // Legacy alias: some clients still send display_name instead of name
+  @IsOptional()
+  @IsString()
+  display_name?: string;
+
+  // Mandatory fields
+  @Transform(({ value, obj }) => value ?? obj.display_name ?? obj.displayName)
+  @IsString()
   @IsNotEmpty()
-  dob: string;
+  name: string; // Display Name / Nickname
 
   @IsString()
   @IsOptional()
-  @MaxLength(500)
-  bio?: string;
+  profile_photo?: string; // URL or uploaded file reference
+
+  // accept legacy short_bio as well
+  @IsOptional()
+  @IsString()
+  short_bio?: string;
+
+  @Transform(({ value, obj }) => value ?? obj.short_bio ?? obj.shortBio ?? obj.bio)
+  @IsString()
+  @IsOptional()
+  @MaxLength(200)
+  bio?: string; // Short bio (1-2 lines)
 
   @IsString()
   @IsNotEmpty()
   gender: string;
 
-  @IsArray()
-  @IsString({ each: true })
-  preferred_gender: string[];
+  @IsDateString()
+  @IsNotEmpty()
+  dob: string;
 
   @IsArray()
   @IsString({ each: true })
-  languages: string[];
+  @ArrayMinSize(3, { message: 'At least 3 interests/tags must be selected' })
+  interests: string[];
 
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PresetLocationDto)
+  @IsOptional()
+  preset_locations?: PresetLocationDto[]; // Company-defined meeting spots (id + name)
+
+  @IsString()
+  @IsNotEmpty()
+  city: string; // City name (e.g., Kochi) - required for matching
+
+  // Optional fields
+  @IsOptional()
   @IsObject()
-  age_range: {
+  availability?: {
+    // example: { Monday: ['Morning','Evening'], Tuesday: ['Afternoon'] }
+    [day: string]: string[];
+  };
+
+  @IsOptional()
+  @IsString()
+  preferred_gender?: string; // male/female/any
+
+  @IsOptional()
+  @IsObject()
+  preferred_age_range?: {
     min: number;
     max: number;
   };
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  interests: string[];
+  personality_traits?: string[];
 
-  @IsObject()
   @IsOptional()
-  traits?: {
-    extroversion?: number;
-    introversion?: number;
-    agreeableness?: number;
-    assertiveness?: number;
-    openness?: number;
-    emotional_stability?: number;
-    conscientiousness?: number;
-    sarcastic_humor?: boolean;
-    dry_humor?: boolean;
-    playful_humor?: boolean;
-    silly_humor?: boolean;
-    intellectual_humor?: boolean;
-  };
-
-  @IsObject()
-  @IsOptional()
-  boundaries?: {
-    talk_intensity?: string;
-    silence_tolerance?: string;
-    emotional_openness?: string;
-  };
-
-  @IsObject()
-  @IsOptional()
-  preferences?: {
-    duration?: string[];
-    frequency?: string[];
-  };
-
-  @IsObject()
-  @IsOptional()
-  verification?: {
-    id_verified?: boolean;
-    social_profiles?: string[];
-  };
+  @IsArray()
+  @IsString({ each: true })
+  boundaries?: string[]; // e.g., ['no smoking', 'no pets']
 
   @IsString()
   @IsOptional()
   @MaxLength(200)
-  custom_note?: string;
-
-  @IsString()
-  @IsNotEmpty()
-  city: string;
-
-  @IsArray()
-  @IsNumber({}, { each: true })
-  coordinates: number[]; // [longitude, latitude]
-
-  @IsNumber()
-  @IsOptional()
-  @Min(1)
-  @Max(100)
-  distance_limit_km?: number;
+  custom_note?: string; // short note or special preferences
 }

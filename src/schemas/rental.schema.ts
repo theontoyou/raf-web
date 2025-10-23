@@ -8,11 +8,11 @@ class RentalLocation {
   @Prop({ required: true })
   city: string;
 
-  @Prop({ default: 'Point' })
-  type: string;
+  @Prop()
+  preset_location_id: string;
 
-  @Prop({ type: [Number], required: true })
-  coordinates: number[]; // [longitude, latitude]
+  @Prop()
+  preset_location_name: string;
 }
 
 @Schema({ _id: false })

@@ -108,44 +108,31 @@ export class ProfileService {
       throw new ForbiddenException('User must be at least 18 years old');
     }
 
-    // Build profile object
+    // Build profile object (store preset locations as provided)
     user.profile = {
       name: createProfileDto.name,
       dob: createProfileDto.dob,
       bio: createProfileDto.bio,
       gender: createProfileDto.gender,
-      preferred_gender: createProfileDto.preferred_gender,
       age,
-      age_range: createProfileDto.age_range,
-      languages: createProfileDto.languages,
       images: imageFiles || [],
       city: createProfileDto.city,
-      location: {
-        type: 'Point',
-        coordinates: createProfileDto.coordinates,
-      },
-      distance_limit_km: createProfileDto.distance_limit_km || 15,
-    };
+      // legacy location/coordinates removed; using preset_locations on user root
+    } as any;
 
-    if (createProfileDto.traits) {
-      user.traits = createProfileDto.traits as any;
-    }
+    // attach simple fields
+    if (createProfileDto.profile_photo) user.profile.images = [createProfileDto.profile_photo, ...(user.profile.images || [])];
 
-    if (createProfileDto.boundaries) {
-      user.boundaries = createProfileDto.boundaries as any;
-    }
+  // Store preset locations on user document as a simple array of objects (may be empty)
+  (user as any).preset_locations = createProfileDto.preset_locations || [];
 
-    if (createProfileDto.preferences) {
-      user.preferences = createProfileDto.preferences as any;
-    }
+    if (createProfileDto.availability) (user as any).availability = createProfileDto.availability;
+    if (createProfileDto.preferred_gender) (user as any).preferred_gender = createProfileDto.preferred_gender;
+    if (createProfileDto.preferred_age_range) (user as any).preferred_age_range = createProfileDto.preferred_age_range;
+    if (createProfileDto.personality_traits) (user as any).personality_traits = createProfileDto.personality_traits;
+    if (createProfileDto.boundaries) (user as any).boundaries = createProfileDto.boundaries;
 
-    if (createProfileDto.verification) {
-      user.verification = {
-        ...user.verification,
-        ...createProfileDto.verification,
-      } as any;
-    }
-
+    // traits/preferences/verification handled elsewhere; map available fields
     user.interests = createProfileDto.interests;
     user.custom_note = createProfileDto.custom_note;
 
@@ -182,17 +169,14 @@ export class ProfileService {
     if (updateProfileDto.dob) user.profile.dob = updateProfileDto.dob;
     if (updateProfileDto.bio) user.profile.bio = updateProfileDto.bio;
     if (updateProfileDto.gender) user.profile.gender = updateProfileDto.gender;
-    if (updateProfileDto.preferred_gender) user.profile.preferred_gender = updateProfileDto.preferred_gender;
-    if (updateProfileDto.languages) user.profile.languages = updateProfileDto.languages;
-    if (updateProfileDto.age_range) user.profile.age_range = updateProfileDto.age_range;
-  if (Array.isArray(updateProfileDto['images'])) user.profile.images = updateProfileDto['images'];
-    if (updateProfileDto.city) user.profile.city = updateProfileDto.city;
-    if (updateProfileDto.coordinates) user.profile.location.coordinates = updateProfileDto.coordinates;
-    if (updateProfileDto.distance_limit_km) user.profile.distance_limit_km = updateProfileDto.distance_limit_km;
-    if (updateProfileDto.traits) user.traits = updateProfileDto.traits as any;
-    if (updateProfileDto.boundaries) user.boundaries = updateProfileDto.boundaries as any;
-    if (updateProfileDto.preferences) user.preferences = updateProfileDto.preferences as any;
-    if (updateProfileDto.verification) user.verification = { ...user.verification, ...updateProfileDto.verification } as any;
+    if (Array.isArray(updateProfileDto['images'])) user.profile.images = updateProfileDto['images'];
+    if (updateProfileDto.profile_photo) user.profile.images = [updateProfileDto.profile_photo, ...(user.profile.images || [])];
+    if (updateProfileDto.preset_locations) (user as any).preset_locations = updateProfileDto.preset_locations;
+    if (updateProfileDto.availability) (user as any).availability = updateProfileDto.availability;
+    if (updateProfileDto.preferred_gender) (user as any).preferred_gender = updateProfileDto.preferred_gender;
+    if (updateProfileDto.preferred_age_range) (user as any).preferred_age_range = updateProfileDto.preferred_age_range;
+    if (updateProfileDto.personality_traits) (user as any).personality_traits = updateProfileDto.personality_traits;
+    if (updateProfileDto.boundaries) (user as any).boundaries = updateProfileDto.boundaries;
     if (updateProfileDto.interests) user.interests = updateProfileDto.interests;
     if (updateProfileDto.custom_note) user.custom_note = updateProfileDto.custom_note;
     await user.save();

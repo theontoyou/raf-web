@@ -5,7 +5,8 @@ export class InitiateRentalDto {
   @IsNotEmpty()
   location: {
     city: string;
-    coordinates: number[];
+    preset_location_id?: string;
+    preset_location_name?: string;
   };
 
   @IsObject()

@@ -73,12 +73,6 @@ class Profile {
 
   @Prop()
   city: string;
-
-  @Prop({ type: Location, index: '2dsphere' })
-  location: Location;
-
-  @Prop({ default: 15 })
-  distance_limit_km: number;
 }
 
 @Schema({ _id: false })
@@ -120,17 +114,9 @@ class Traits {
   intellectual_humor: boolean;
 }
 
-@Schema({ _id: false })
-class Boundaries {
-  @Prop()
-  talk_intensity: string;
+// Boundaries were originally modeled as an object; switch to an array of strings
+// to accept incoming payloads like ["no smoking", "no pets"].
 
-  @Prop()
-  silence_tolerance: string;
-
-  @Prop()
-  emotional_openness: string;
-}
 
 @Schema({ _id: false })
 class Preferences {
@@ -194,14 +180,31 @@ export class User {
   @Prop({ type: Profile })
   profile: Profile;
 
+  @Prop({ type: [{ id: String, name: String }], default: [] })
+  preset_locations: { id: string; name: string }[];
+
+  // availability stored as a map from day/slot keys to array of strings
+  @Prop({ type: Map, of: [String], default: {} })
+  availability: Map<string, string[]> | Record<string, string[]>;
+
+  @Prop()
+  preferred_gender: string;
+
+  @Prop({ type: { min: Number, max: Number } })
+  preferred_age_range: { min: number; max: number };
+
+  @Prop({ type: [String] })
+  personality_traits: string[];
+
   @Prop({ type: Traits })
   traits: Traits;
 
   @Prop({ type: [String], index: true })
   interests: string[];
 
-  @Prop({ type: Boundaries })
-  boundaries: Boundaries;
+  // Accept boundaries as a simple array of strings (e.g. ["no smoking", "no pets"])
+  @Prop({ type: [String] })
+  boundaries: string[];
 
   @Prop({ type: Preferences })
   preferences: Preferences;

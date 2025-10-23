@@ -7,7 +7,7 @@ export class MatchesController {
 
   @Get('top')
   async getTopMatches(
-    @Query('user_id') userId: string,
+    @Query('user_id') userId?: string,
     @Query('city') city?: string,
     @Query('age_min') ageMin?: string,
     @Query('age_max') ageMax?: string,

@@ -29,34 +29,19 @@ export class RentalsService {
         'profile.city': location.city,
         'profile.gender': { $in: preferred_gender },
         'profile.age': { $gte: preferred_age.min, $lte: preferred_age.max },
-        'profile.location': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: location.coordinates,
-            },
-            $maxDistance: 15000, // 15km in meters
-          },
-        },
+        // Matching by preset location id/name if provided
+        ...(location.preset_location_id ? { 'preset_locations.id': location.preset_location_id } : {}),
+        ...(location.preset_location_name ? { 'preset_locations.name': location.preset_location_name } : {}),
       })
       .limit(10)
       .select('profile.name profile.age profile.images profile.location profile.city');
 
-    const matchResults = matches.map((match) => {
-      // Calculate distance (simplified)
-      const distance = this.calculateDistance(
-        location.coordinates,
-        match.profile?.location?.coordinates || [0, 0],
-      );
-
-      return {
-        user_id: match._id,
-        name: match.profile?.name,
-        age: match.profile?.age,
-        distance_km: Math.round(distance),
-        image: match.profile?.images?.[0] || '',
-      };
-    });
+    const matchResults = matches.map((match) => ({
+      user_id: match._id,
+      name: match.profile?.name,
+      age: match.profile?.age,
+      image: match.profile?.images?.[0] || '',
+    }));
 
     return {
       status: 'success',
@@ -96,8 +81,8 @@ export class RentalsService {
       host_id,
       location: {
         city: location.city,
-        type: 'Point',
-        coordinates: location.coordinates,
+        preset_location_id: location.preset_location_id,
+        preset_location_name: location.preset_location_name,
       },
       scheduled_at: new Date(scheduled_at),
       status: 'confirmed',
@@ -159,26 +144,5 @@ export class RentalsService {
   }
 
   // Helper function to calculate distance between two coordinates
-  private calculateDistance(coords1: number[], coords2: number[]): number {
-    const [lon1, lat1] = coords1;
-    const [lon2, lat2] = coords2;
-
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLon = this.toRad(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) *
-        Math.cos(this.toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private toRad(value: number): number {
-    return (value * Math.PI) / 180;
-  }
+  // distance calculation removed - rentals match by preset locations
 }

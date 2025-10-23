@@ -24,6 +24,7 @@ import { MatchesModule } from './matches/matches.module';
     BannersModule,
     RentalsModule,
     MatchesModule,
+    (require('./locations/locations.module').LocationsModule),
   ],
 })
 export class AppModule {}
