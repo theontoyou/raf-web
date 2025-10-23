@@ -54,7 +54,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"name\": \"Ayush V Nair\",\n  \"dob\": \"2002-11-20\",\n  \"bio\": \"Traveler and foodie\",\n  \"gender\": \"Male\",\n  \"preferred_gender\": [\"Female\"],\n  \"languages\": [\"English\", \"Malayalam\"],\n  \"age_range\": { \"min\": 20, \"max\": 26 },\n  \"interests\": [\"Movies\", \"Travel\", \"Food & Café Hopping\"],\n  \"traits\": {\n    \"extroversion\": 7,\n    \"introversion\": 3,\n    \"agreeableness\": 8,\n    \"openness\": 9\n  },\n  \"boundaries\": {\n    \"talk_intensity\": \"Moderate\",\n    \"silence_tolerance\": \"High\",\n    \"emotional_openness\": \"Medium\"\n  },\n  \"preferences\": {\n    \"duration\": [\"Short\", \"Medium\"],\n    \"frequency\": [\"Occasional\"]\n  },\n  \"city\": \"Bangalore\",\n  \"coordinates\": [77.5946, 12.9716],\n  \"distance_limit_km\": 15,\n  \"custom_note\": \"Looking for someone fun\"\n}"
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"phone_number\": \"9876543210\",\n  \"display_name\": \"Ayush V Nair\",\n+  \"profile_photo_url\": \"https://cdn.ontoyou.com/avatars/default.jpg\",\n  \"name\": \"Ayush V Nair\",\n  \"dob\": \"2002-11-20\",\n  \"short_bio\": \"Traveler and foodie\",\n  \"gender\": \"Male\",\n  \"preferred_gender\": [\"Female\"],\n  \"preferred_age_range\": { \"min\": 20, \"max\": 26 },\n  \"age\": 23,\n  \"languages\": [\"English\", \"Malayalam\"],\n  \"interests\": [\"Movies\", \"Travel\", \"Food & Café Hopping\"],\n  \"personality_traits\": [\"friendly\", \"adventurous\"],\n  \"traits\": {\n    \"extroversion\": 7,\n    \"introversion\": 3,\n    \"agreeableness\": 8,\n    \"openness\": 9\n  },\n  \"boundaries\": {\n    \"talk_intensity\": \"Moderate\",\n    \"silence_tolerance\": \"High\",\n    \"emotional_openness\": \"Medium\"\n  },\n  \"boundaries_list\": [\"no smoking\", \"no pets\"],\n  \"preferences\": {\n    \"duration\": [\"Short\", \"Medium\"],\n    \"frequency\": [\"Occasional\"]\n  },\n  \"locations\": [\"Koramangala\", \"Indiranagar\"],\n  \"city\": \"Bangalore\",\n  \"coordinates\": [77.5946, 12.9716],\n  \"distance_limit_km\": 15,\n  \"activity_score\": 5,\n  \"freshness_score\": 1.0,\n  \"custom_note\": \"Looking for someone fun\",\n  \"created_at\": \"2025-10-23T10:00:00Z\",\n  \"last_active\": \"2025-10-23T10:00:00Z\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/profile/create", "host": ["{{baseUrl}}"], "path": ["profile", "create"] }
           }
@@ -183,6 +183,37 @@
                 { "key": "city", "value": "Bangalore" }
               ]
             }
+          }
+        }
+      ]
+    }
+    ,
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Get Locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/locations?city=Bangalore", "host": ["{{baseUrl}}"], "path": ["locations"], "query": [{ "key": "city", "value": "Bangalore" }] }
+          }
+        },
+        {
+          "name": "Add Location",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Koramangala Meetup Spot\",\n  \"coordinates\": [77.6261, 12.9352],\n  \"spot_type\": \"cafe\",\n  \"description\": \"Cozy cafe with outdoor seating\",\n  \"city\": \"Bangalore\"\n}" },
+            "url": { "raw": "{{baseUrl}}/locations", "host": ["{{baseUrl}}"], "path": ["locations"] }
+          }
+        },
+        {
+          "name": "Delete Location",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/locations/{{locationId}}", "host": ["{{baseUrl}}"], "path": ["locations", "{{locationId}}"] }
           }
         }
       ]
