@@ -177,15 +177,20 @@ export class User {
   @Prop({ type: Auth, required: true })
   auth: Auth;
 
+  // role: 'user' or 'admin'
+  @Prop({ default: 'user' })
+  role: string;
+
   @Prop({ type: Profile })
   profile: Profile;
 
   @Prop({ type: [{ id: String, name: String }], default: [] })
   preset_locations: { id: string; name: string }[];
 
-  // availability stored as a map from day/slot keys to array of strings
-  @Prop({ type: Map, of: [String], default: {} })
-  availability: Map<string, string[]> | Record<string, string[]>;
+  // availability stored as a map from weekday to an array of available hours (numbers)
+  // example: { Monday: [11, 17], Friday: [15] }
+  @Prop({ type: Map, of: [Number], default: {} })
+  availability: Map<string, number[]> | Record<string, number[]>;
 
   @Prop()
   preferred_gender: string;
@@ -201,6 +206,13 @@ export class User {
 
   @Prop({ type: [String], index: true })
   interests: string[];
+
+  @Prop({ default: false })
+  is_on_rent: boolean;
+
+  // Track active bookings per user with booking_date and booking_hour (0-23)
+  @Prop({ type: [{ booking_date: String, booking_hour: Number, rental_id: String, role: String, status: String }], default: [] })
+  active_bookings: Array<{ booking_date: string; booking_hour: number; rental_id?: string; role?: string; status?: string }>;
 
   // Accept boundaries as a simple array of strings (e.g. ["no smoking", "no pets"])
   @Prop({ type: [String] })

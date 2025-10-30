@@ -1,6 +1,9 @@
-import { IsString, IsNotEmpty, IsArray, IsNumber, IsObject, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, IsNumber, IsObject, Min, IsOptional, IsDateString } from 'class-validator';
 
 export class InitiateRentalDto {
+  @IsOptional()
+  @IsString()
+  user_id?: string;
   @IsObject()
   @IsNotEmpty()
   location: {
@@ -9,25 +12,33 @@ export class InitiateRentalDto {
     preset_location_name?: string;
   };
 
-  @IsObject()
+  @IsDateString()
   @IsNotEmpty()
-  preferred_age: {
+  booking_date: string; // ISO date string (YYYY-MM-DD or full ISO)
+
+  // Accept a booking hour range (start and end inclusive) in 24-hour format (0-23)
+  @IsOptional()
+  @IsNumber()
+  booking_hour_start?: number;
+
+  @IsOptional()
+  @IsNumber()
+  booking_hour_end?: number;
+
+  @IsOptional()
+  @IsObject()
+  preferred_age?: {
     min: number;
     max: number;
   };
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  preferred_gender: string[];
+  preferred_gender?: string[];
+  // legacy time_slot removed in favor of booking_date + booking_hour range
 
-  @IsObject()
-  @IsNotEmpty()
-  time_slot: {
-    start: string;
-    end: string;
-  };
-
+  @IsOptional()
   @IsNumber()
-  @Min(1)
-  duration_hours: number;
+  limit?: number;
 }

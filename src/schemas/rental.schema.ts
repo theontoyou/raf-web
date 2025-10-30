@@ -38,8 +38,17 @@ export class Rental {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   host_id: Types.ObjectId;
 
-  @Prop({ type: RentalLocation, index: '2dsphere' })
+  // Location is a simple object (city + preset location). Remove 2dsphere index to avoid GeoJSON requirements.
+  @Prop({ type: RentalLocation })
   location: RentalLocation;
+
+  
+
+  @Prop({ required: true })
+  booking_date: string; // stored as YYYY-MM-DD string to represent date without time
+
+  @Prop({ required: true })
+  booking_hour: number; // hour in 24-hour format (0-23)
 
   @Prop({ required: true })
   scheduled_at: Date;

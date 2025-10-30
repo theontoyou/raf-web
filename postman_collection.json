@@ -100,7 +100,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"display_name\": \"Ayush V Nair\",\n  \"profile_photo\": \"https://cdn.ontoyou.com/avatars/default.jpg\",\n  \"short_bio\": \"Traveler and foodie\",\n  \"gender\": \"Male\",\n  \"dob\": \"2002-11-20\",\n  \"interests\": [\"Movies\", \"Travel\", \"Food & Café Hopping\"],\n  \"preset_locations\": [{\"id\": \"loc_kora\", \"name\": \"Koramangala Meetup Spot\"}, {\"id\": \"loc_ind\", \"name\": \"Indiranagar Meetup Spot\"}],\n  \"availability\": {\"Monday\": [\"Morning\", \"Evening\"], \"Friday\": [\"Evening\"]},\n  \"preferred_gender\": \"Female\",\n  \"preferred_age_range\": {\"min\": 20, \"max\": 26},\n  \"personality_traits\": [\"friendly\", \"adventurous\"],\n  \"boundaries\": [\"no smoking\", \"no pets\"],\n  \"custom_note\": \"Looking for someone fun\"\n}"
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"display_name\": \"Ayush V Nair\",\n  \"profile_photo\": \"https://cdn.ontoyou.com/avatars/default.jpg\",\n  \"short_bio\": \"Traveler and foodie\",\n  \"gender\": \"Male\",\n  \"dob\": \"2002-11-20\",\n  \"city\": \"Bangalore\",\n  \"preset_locations\": [{\"id\": \"6902ec2cc6ba60dd8bda0389\", \"name\": \"OBRONE MALL\"}],\n  \"availability\": {\"Monday\": [18,19,20], \"Friday\": [20]},\n  \"interests\": [\"Movies\", \"Travel\", \"Food & Café Hopping\"],\n  \"preferred_gender\": \"Female\",\n  \"preferred_age_range\": {\"min\": 20, \"max\": 26},\n  \"custom_note\": \"Looking for someone fun\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/profile/create",
@@ -137,7 +137,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"short_bio\": \"Updated bio\",\n  \"preset_locations\": [{\"id\": \"loc_kora\", \"name\": \"Koramangala Meetup Spot\"}]\n}"
+              "raw": "{\n  \"short_bio\": \"Updated bio\",\n  \"city\": \"Bangalore\",\n  \"preset_locations\": [{\"id\": \"6902ec2cc6ba60dd8bda0389\", \"name\": \"OBRONE MALL\"}]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/profile/{{userId}}",
@@ -230,7 +230,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"preset_location_id\": \"loc_kora\",\n    \"preset_location_name\": \"Koramangala Meetup Spot\"\n  },\n  \"preferred_age\": {\"min\": 20, \"max\": 26},\n  \"preferred_gender\": [\"Female\"],\n  \"time_slot\": {\"start\": \"18:00\", \"end\": \"20:00\"},\n  \"duration_hours\": 2\n}"
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"preset_location_id\": \"6902ec2cc6ba60dd8bda0389\",\n    \"preset_location_name\": \"OBRONE MALL\"\n  },\n  \"preferred_age\": {\"min\": 0, \"max\": 100},\n  \"preferred_gender\": [\"Female\"],\n  \"booking_date\": \"2025-11-01\",\n  \"booking_hour_start\": 17,\n  \"booking_hour_end\": 19,\n  \"limit\": 3\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/rentals/initiate",
@@ -251,7 +251,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"renter_id\": \"{{userId}}\",\n  \"host_id\": \"HOST_USER_ID\",\n  \"scheduled_at\": \"2025-10-25T17:00:00Z\",\n  \"duration_hours\": 2,\n  \"credits_used\": 2,\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"preset_location_id\": \"loc_kora\",\n    \"preset_location_name\": \"Koramangala Meetup Spot\"\n  }\n}"
+              "raw": "{\n  \"renter_id\": \"{{userId}}\",\n  \"host_id\": \"HOST_USER_ID\",\n  \"booking_date\": \"2025-11-01\",\n  \"booking_hour\": 18,\n  \"duration_hours\": 2,\n  \"credits_used\": 2,\n  \"location\": {\n    \"city\": \"Bangalore\",\n    \"preset_location_id\": \"loc_kora\",\n    \"preset_location_name\": \"Koramangala Meetup Spot\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/rentals/confirm",
@@ -292,7 +292,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/matches/top?user_id={{userId}}&city=Bangalore",
+              "raw": "{{baseUrl}}/matches/top?user_id={{userId}}&city=Bangalore&booking_date=2025-11-01&booking_hour=18",
               "host": ["{{baseUrl}}"],
               "path": ["matches", "top"],
               "query": [
@@ -303,6 +303,14 @@
                 {
                   "key": "city",
                   "value": "Bangalore"
+                },
+                {
+                  "key": "booking_date",
+                  "value": "2025-11-01"
+                },
+                {
+                  "key": "booking_hour",
+                  "value": "18"
                 }
               ]
             }
@@ -355,7 +363,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"district\": \"Kochi\",\n  \"place_name\": \"Lulu Mall\",\n  \"preset_location_id\": \"loc_lulu\",\n  \"coordinates\": [77.0879, 9.9667],\n  \"spot_type\": \"mall\",\n  \"description\": \"Popular shopping mall\",\n  \"city\": \"Kochi\"\n}"
+              "raw": "{\n  \"district\": \"Kochi\",\n  \"place_name\": \"Lulu Mall\",\n  \"preset_location_name\": \"Lulu Mall\",\n  \"spot_type\": \"mall\",\n  \"description\": \"Popular shopping mall\",\n  \"city\": \"Kochi\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/locations",

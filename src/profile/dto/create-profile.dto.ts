@@ -78,8 +78,8 @@ export class CreateProfileDto {
   @IsOptional()
   @IsObject()
   availability?: {
-    // example: { Monday: ['Morning','Evening'], Tuesday: ['Afternoon'] }
-    [day: string]: string[];
+    // example: { Monday: [11,17], Tuesday: [15] } - hours in 24-hour format
+    [day: string]: number[];
   };
 
   @IsOptional()

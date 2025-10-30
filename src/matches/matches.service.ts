@@ -8,15 +8,19 @@ export class MatchesService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async getTopMatches(query: {
-    user_id: string;
+    user_id?: string;
     city?: string;
     age_min?: number;
     age_max?: number;
     gender?: string;
     preset_location_id?: string;
     preset_location_name?: string;
+    booking_date?: string;
+    booking_hour?: number;
+    limit?: number;
+    step?: number;
   }) {
-    const { user_id, city, age_min, age_max, gender } = query;
+    const { user_id, city, age_min, age_max, gender, booking_date, booking_hour, limit = 3, step = 0 } = query;
 
     // Get current user to understand preferences (if provided)
     let currentUser: any = null;
@@ -45,6 +49,15 @@ export class MatchesService {
       return { status: 'error', msg: 'City is required', matches: [] };
     }
 
+    // If booking_hour and booking_date are provided, filter users by their availability map
+    // availability is stored as a map with weekday keys mapping to arrays of hour numbers
+    if (booking_date && typeof booking_hour === 'number') {
+      // Determine weekday string from booking_date
+      const wkday = new Date(booking_date).toLocaleDateString('en-US', { weekday: 'long' });
+      // Match users who have this hour in their availability for that weekday
+      matchCriteria[`availability.${wkday}`] = booking_hour;
+    }
+
     if (gender) {
       matchCriteria['profile.gender'] = gender;
     } else if (currentUser?.profile?.preferred_gender?.length) {
@@ -67,12 +80,31 @@ export class MatchesService {
       matchCriteria['preset_locations.name'] = query.preset_location_name;
     }
 
+    const skip = Math.max(0, step) * Math.max(0, limit);
+    // If booking_date and booking_slot are present, exclude users who already have an active booking for that date+slot
+    if (booking_date && typeof booking_hour === 'number') {
+      const bookingDateKey = new Date(booking_date).toISOString().slice(0, 10);
+      // Exclude users with active_bookings matching this date+hour and active status
+      matchCriteria.$nor = matchCriteria.$nor || [];
+      matchCriteria.$nor.push({
+        active_bookings: {
+          $elemMatch: {
+            booking_date: bookingDateKey,
+            booking_hour: booking_hour,
+            status: { $in: ['pending', 'confirmed', 'in-progress'] },
+          },
+        },
+      });
+    }
+
     const matches = await this.userModel
       .find(matchCriteria)
-      .limit(20)
-      .select('profile.name profile.age profile.images profile.bio interests preset_locations');
+      .sort({ 'status.last_seen': -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('profile.name profile.age profile.images profile.bio interests preset_locations status.last_seen availability is_on_rent active_bookings');
 
-    // Format results (no distance calculation)
+    // Format initial results (no distance calculation)
     const matchResults = matches.map((match) => ({
       user_id: match._id,
       name: match.profile?.name,
@@ -80,46 +112,68 @@ export class MatchesService {
       image: match.profile?.images?.[0] || '',
       bio: match.profile?.bio || '',
       interests: match.interests || [],
-      preset_locations: match.preset_locations || [],
+      availability: match.availability || {},
+      is_on_rent: !!match.is_on_rent,
+      active_bookings: match.active_bookings || [],
+      // return only id/name for preset locations to avoid exposing mongoose _id
+      preset_locations: (match.preset_locations || []).map((p: any) => ({ id: p.id, name: p.name })),
+      last_seen: match.status?.last_seen,
     }));
 
-    if (matchResults.length === 0) {
-      // No exact matches for the given criteria — fall back to returning people from the same city
+    // If we have fewer results than requested, try to fill from city-wide users (excluding already returned ids)
+    if (matchResults.length < limit) {
+      const needed = limit - matchResults.length;
+      const excludedIds = matchResults.map((m) => m.user_id);
+
       const cityOnlyCriteria: any = { 'profile.city': matchCriteria['profile.city'] };
       if (user_id) cityOnlyCriteria._id = { $ne: user_id };
+      if (excludedIds.length) cityOnlyCriteria._id = { ...(cityOnlyCriteria._id || {}), $nin: excludedIds };
+
+      if (booking_date && typeof booking_hour === 'number') {
+        const bookingDateKey = new Date(booking_date).toISOString().slice(0, 10);
+        cityOnlyCriteria.$nor = cityOnlyCriteria.$nor || [];
+        cityOnlyCriteria.$nor.push({
+          active_bookings: {
+            $elemMatch: {
+              booking_date: bookingDateKey,
+              booking_hour: booking_hour,
+              status: { $in: ['pending', 'confirmed', 'in-progress'] },
+            },
+          },
+        });
+      }
 
       const cityMatches = await this.userModel
         .find(cityOnlyCriteria)
-        .limit(20)
-        .select('profile.name profile.age profile.images profile.bio interests preset_locations');
+        .sort({ 'status.last_seen': -1 })
+        .skip(skip)
+        .limit(needed)
+        .select('profile.name profile.age profile.images profile.bio interests preset_locations status.last_seen availability is_on_rent active_bookings');
 
-      const fallbackResults = cityMatches.map((match) => ({
+      const supplemental = cityMatches.map((match) => ({
         user_id: match._id,
         name: match.profile?.name,
         age: match.profile?.age,
         image: match.profile?.images?.[0] || '',
         bio: match.profile?.bio || '',
         interests: match.interests || [],
-        preset_locations: match.preset_locations || [],
+        availability: match.availability || {},
+        preset_locations: (match.preset_locations || []).map((p: any) => ({ id: p.id, name: p.name })),
+        last_seen: match.status?.last_seen,
       }));
 
-      if (fallbackResults.length === 0) {
-        return {
-          status: 'error',
-          msg: 'No matches found',
-          matches: [],
-        };
-      }
+      const combined = [...matchResults, ...supplemental];
 
       return {
         status: 'success',
-        msg: 'No exact matches — returning users from the same city',
-        matches: fallbackResults,
+        msg: combined.length === 0 ? 'No matches found' : 'Matches returned',
+        matches: combined,
       };
     }
 
     return {
       status: 'success',
+      msg: 'Matches returned',
       matches: matchResults,
     };
   }

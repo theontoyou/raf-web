@@ -39,6 +39,7 @@ export class AuthService {
           otp_verified: false,
           created_at: new Date(),
         },
+        role: 'user',
         credits: {
           balance: parseInt(this.configService.get('DEFAULT_USER_CREDITS', '3')),
           spent: 0,
@@ -124,14 +125,15 @@ export class AuthService {
     // Generate JWT token if enabled
     let token = null;
     if (this.configService.get('JWT_ENABLED') === 'true') {
-      const payload = { sub: user._id, mobile: mobile_number };
+      const payload = { sub: user._id, mobile: mobile_number, role: user.role || 'user' };
       token = this.jwtService.sign(payload);
     }
 
     return createResponse(
       'success',
       SUCCESS_MESSAGES.OTP_VERIFIED,
-      { token, user_id: user._id },
+      // Include whether the user already has a completed account/profile
+      { token, user_id: user._id, account_created: !!(user.profile && user.profile.name) },
       STATUS_CODES.SUCCESS,
     );
   }
