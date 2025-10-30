@@ -1,16 +1,14 @@
-import { IsString, IsNotEmpty, IsArray, IsNumber, IsObject, Min, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, IsNumber, IsObject, Min, IsOptional, IsDateString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { LocationDto } from './location.dto';
 
 export class InitiateRentalDto {
   @IsOptional()
-  @IsString()
-  user_id?: string;
-  @IsObject()
+  // user_id removed: use JWT-derived user id (req.user) instead of client-provided id
+  @ValidateNested()
+  @Type(() => LocationDto)
   @IsNotEmpty()
-  location: {
-    city: string;
-    preset_location_id?: string;
-    preset_location_name?: string;
-  };
+  location: LocationDto;
 
   @IsDateString()
   @IsNotEmpty()

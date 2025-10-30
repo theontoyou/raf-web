@@ -12,13 +12,11 @@ export class RentalsController {
   @Post('initiate')
   @UseGuards(JwtAuthGuard) // Requires JWT authentication
   async initiateRental(@Body() initiateRentalDto: InitiateRentalDto, @Req() req: any) {
-    // Get userId from JWT token in production
-    const userId = req.body.user_id || req.user?.id || req.user?._id;
+    // Renter id comes from the authenticated JWT user. Do not allow client to override.
+    const userId = req.user?.id || req.user?._id;
 
     if (!userId) {
-      // If JWT is disabled (guard allowed requests) we require client to pass user_id in body
-      // so that we can look up credits and perform rental initiation.
-      throw new BadRequestException('user_id is required in request body when not authenticated');
+      throw new BadRequestException('Authenticated user not found');
     }
 
     return this.rentalsService.initiateRental(userId, initiateRentalDto);
@@ -26,7 +24,16 @@ export class RentalsController {
 
   @Post('confirm')
   @UseGuards(JwtAuthGuard) // Requires JWT authentication
-  async confirmRental(@Body() confirmRentalDto: ConfirmRentalDto) {
+  async confirmRental(@Body() confirmRentalDto: ConfirmRentalDto, @Req() req: any) {
+    // Ensure renter_id is the authenticated user. If client omitted it, set it from JWT.
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      throw new BadRequestException('Authenticated user not found');
+    }
+
+    // Fill renter_id if missing or if client attempted to override
+    (confirmRentalDto as any).renter_id = String(userId);
+
     return this.rentalsService.confirmRental(confirmRentalDto);
   }
 
@@ -43,7 +50,9 @@ export class RentalsController {
     @Query('step') step?: string,
     @Query('limit') limit?: string,
   ) {
-    const s = step ? parseInt(step, 10) : 0;
+    // Treat `step` as a 1-based page index for client friendliness (default page = 1).
+    // Backwards-compatible: if older clients pass 0 it will be clamped to 1.
+    const s = step ? parseInt(step, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 10;
     return this.rentalsService.getUserOrders(userId, s, l);
   }

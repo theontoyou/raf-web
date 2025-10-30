@@ -1,0 +1,233 @@
+{
+  "info": {
+    "name": "Admin APIs - OnToYou",
+    "_postman_id": "admin-collection",
+    "description": "Collection with admin-related APIs and auth endpoints (use {{baseUrl}}).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Auth - Login (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile_number\": \"<admin_mobile>\"\n}" },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Auth - Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile_number\": \"<admin_mobile>\",\n  \"otp\": \"<otp_from_console_or_sms>\"\n}" },
+            "url": "{{baseUrl}}/auth/verify"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Account",
+      "item": [
+        {
+          "name": "Admin - Create (protected)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"mobile_number\": \"<new_admin_mobile>\",\n  \"name\": \"Admin Name\"\n}" },
+            "url": "{{baseUrl}}/admin/create"
+          }
+        }
+        ,
+        {
+          "name": "Admin - Login (email)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"P@ssw0rd!\"\n}" },
+            "url": "{{baseUrl}}/admin/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.token) { pm.environment.set('adminToken', res.token); pm.environment.set('adminUserId', res.user_id || ''); }",
+                  "pm.test('Login returned token', () => pm.expect(res.token).to.exist);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin - Logout (protected)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": "{{baseUrl}}/admin/logout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.unset('adminToken');",
+                  "pm.environment.unset('adminUserId');",
+                  "pm.test('Logged out', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin - Users",
+      "item": [
+        {
+          "name": "Admin - List Users",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/users?city=KOCHI&status=active&step=1&limit=20", "host": ["{{baseUrl}}"], "path": ["admin", "users"] }
+          }
+        },
+        {
+          "name": "Admin - Delete User (soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": "{{baseUrl}}/admin/users/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Rentals",
+      "item": [
+        {
+          "name": "Admin - Active Rentals by Location",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/rentals/active?city=KOCHI&preset_location_id=69020a50b6640e9c89d211b8&step=1&limit=20", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "active"] }
+          }
+        },
+        {
+          "name": "Admin - Recent Rentals (dashboard feed)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/rentals/recent?limit=5", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "recent"] }
+          }
+        },
+        {
+          "name": "Admin - Pending Rentals (action list)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/rentals/pending?limit=20", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "pending"] }
+          }
+        },
+        {
+          "name": "Admin - Confirm Rental",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/admin/rentals/{{rentalId}}/confirm", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "{{rentalId}}", "confirm"] }
+          }
+        },
+        {
+          "name": "Admin - Cancel Rental",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer no-show\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/rentals/{{rentalId}}/cancel", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "{{rentalId}}", "cancel"] }
+          }
+        },
+        {
+          "name": "Admin - Complete Rental",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/admin/rentals/{{rentalId}}/complete", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "{{rentalId}}", "complete"] }
+          }
+        },
+        {
+          "name": "Admin - Rentals Analytics (series)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/analytics/rentals?range=30d&group_by=day", "host": ["{{baseUrl}}"], "path": ["admin", "analytics", "rentals"] }
+          }
+        },
+        {
+          "name": "Admin - Users Analytics (series)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/analytics/users?range=30d&group_by=day", "host": ["{{baseUrl}}"], "path": ["admin", "analytics", "users"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Locations",
+      "item": [
+        {
+          "name": "Admin - Add Location (protected)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"district\": \"Kochi\",\n  \"place_name\": \"Obrone Mall\",\n  \"city\": \"Kochi\"\n}" },
+            "url": "{{baseUrl}}/locations"
+          }
+        },
+        {
+          "name": "Admin - Delete Location (protected)",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": "{{baseUrl}}/locations/{{presetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Banners",
+      "item": [
+        {
+          "name": "Admin - Add Banner (protected)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"New Banner\",\n  \"image_url\": \"https://cdn.example.com/banner.jpg\",\n  \"target_url\": \"https://example.com\",\n  \"active\": true\n}" },
+            "url": "{{baseUrl}}/banners"
+          }
+        },
+        {
+          "name": "Admin - Delete Banner (protected)",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": "{{baseUrl}}/banners/{{bannerId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,21 +1,20 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
+import { AdminController } from './admin.controller';
+import { AdminService } from './admin.service';
 import { User, UserSchema } from '../schemas/user.schema';
+import { Rental, RentalSchema } from '../schemas/rental.schema';
+import { JwtModule } from '@nestjs/jwt';
 import { TokenBlacklist, TokenBlacklistSchema } from '../schemas/token-blacklist.schema';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: TokenBlacklist.name, schema: TokenBlacklistSchema },
+      { name: Rental.name, schema: RentalSchema },
     ]),
-    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -25,8 +24,8 @@ import { TokenBlacklist, TokenBlacklistSchema } from '../schemas/token-blacklist
       }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  controllers: [AdminController],
+  providers: [AdminService],
+  exports: [AdminService],
 })
-export class AuthModule {}
+export class AdminModule {}

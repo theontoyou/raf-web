@@ -40,10 +40,14 @@ export class MatchesService {
     if (user_id) matchCriteria._id = { $ne: user_id };
 
     // Apply filters
+    // escape helper for regex
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     if (city) {
-      matchCriteria['profile.city'] = city;
+      // use case-insensitive exact match so legacy DB values (mixed case) still match
+      matchCriteria['profile.city'] = new RegExp(`^${escapeRegex(String(city))}$`, 'i');
     } else if (currentUser && currentUser.profile?.city) {
-      matchCriteria['profile.city'] = currentUser.profile.city;
+      matchCriteria['profile.city'] = new RegExp(`^${escapeRegex(String(currentUser.profile.city))}$`, 'i');
     } else {
       // City is mandatory to scope matches if we don't have a user context
       return { status: 'error', msg: 'City is required', matches: [] };
@@ -59,9 +63,12 @@ export class MatchesService {
     }
 
     if (gender) {
-      matchCriteria['profile.gender'] = gender;
+      // case-insensitive match for gender
+      matchCriteria['profile.gender'] = new RegExp(`^${escapeRegex(String(gender))}$`, 'i');
     } else if (currentUser?.profile?.preferred_gender?.length) {
-      matchCriteria['profile.gender'] = { $in: currentUser.profile.preferred_gender };
+      // map preferred genders to regex OR condition
+      const prefs = currentUser.profile.preferred_gender.map((g: string) => new RegExp(`^${escapeRegex(String(g))}$`, 'i'));
+      matchCriteria['profile.gender'] = { $in: prefs } as any;
     }
 
     if (age_min && age_max) {
@@ -77,7 +84,8 @@ export class MatchesService {
     if (query.preset_location_id) {
       matchCriteria['preset_locations.id'] = query.preset_location_id;
     } else if (query.preset_location_name) {
-      matchCriteria['preset_locations.name'] = query.preset_location_name;
+      // case-insensitive match for preset location name
+      matchCriteria['preset_locations.name'] = new RegExp(`^${escapeRegex(String(query.preset_location_name))}$`, 'i');
     }
 
     const skip = Math.max(0, step) * Math.max(0, limit);
@@ -125,7 +133,7 @@ export class MatchesService {
       const needed = limit - matchResults.length;
       const excludedIds = matchResults.map((m) => m.user_id);
 
-      const cityOnlyCriteria: any = { 'profile.city': matchCriteria['profile.city'] };
+  const cityOnlyCriteria: any = { 'profile.city': matchCriteria['profile.city'] };
       if (user_id) cityOnlyCriteria._id = { $ne: user_id };
       if (excludedIds.length) cityOnlyCriteria._id = { ...(cityOnlyCriteria._id || {}), $nin: excludedIds };
 

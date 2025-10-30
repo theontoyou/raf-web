@@ -1,9 +1,12 @@
-import { IsString, IsNotEmpty, IsNumber, IsObject, IsDateString, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsObject, IsDateString, Min, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { LocationDto } from './location.dto';
 
 export class ConfirmRentalDto {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  renter_id: string;
+  renter_id?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -25,15 +28,13 @@ export class ConfirmRentalDto {
   @Min(1)
   duration_hours: number;
 
+  @IsOptional()
   @IsNumber()
-  @Min(1)
-  credits_used: number;
+  @Min(0)
+  credits_used?: number; // optional, defaults to 0 in service
 
-  @IsObject()
+  @ValidateNested()
+  @Type(() => LocationDto)
   @IsNotEmpty()
-  location: {
-    city: string;
-    preset_location_id?: string;
-    preset_location_name?: string;
-  };
+  location: LocationDto;
 }

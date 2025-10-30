@@ -7,6 +7,12 @@ export type UserDocument = User & Document;
 class Auth {
   @Prop({ required: true, unique: true })
   mobile_number: string;
+  @Prop()
+  email?: string;
+
+  // Password stored as salt$hash when set (admins)
+  @Prop()
+  password?: string;
 
   @Prop({ default: false })
   otp_verified: boolean;

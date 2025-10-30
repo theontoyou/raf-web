@@ -1,0 +1,51 @@
+# Admin APIs - RentAFriend (HJSON)
+# Use {{baseUrl}} and set {{adminToken}} after verify
+
+{
+  info: {
+    name: 'Admin APIs - RentAFriend',
+    description: 'Collection with admin-related APIs and auth endpoints (use {{baseUrl}}).'
+  },
+  item: [
+    {
+      name: 'Auth - Login (OTP)',
+      request: { method: 'POST', header: [{ key: 'Content-Type', value: 'application/json' }], body: { mode: 'raw', raw: '{\n  "mobile_number": "<admin_mobile>"\n}' }, url: '{{baseUrl}}/auth/login' }
+    },
+    {
+      name: 'Auth - Verify OTP',
+      request: { method: 'POST', header: [{ key: 'Content-Type', value: 'application/json' }], body: { mode: 'raw', raw: '{\n  "mobile_number": "<admin_mobile>",\n  "otp": "<otp>"\n}' }, url: '{{baseUrl}}/auth/verify' }
+    },
+    {
+      name: 'Admin - Create (protected)',
+      request: { method: 'POST', header: [{ key: 'Content-Type', value: 'application/json' }, { key: 'Authorization', value: 'Bearer {{adminToken}}' }], body: { mode: 'raw', raw: '{\n  "mobile_number": "<new_admin_mobile>",\n  "name": "Admin Name"\n}' }, url: '{{baseUrl}}/admin/create' }
+    },
+    {
+      name: 'Admin - List Users',
+      request: { method: 'GET', header: [{ key: 'Authorization', value: 'Bearer {{adminToken}}' }], url: '{{baseUrl}}/admin/users?city=KOCHI&status=active&step=1&limit=20' }
+    },
+    {
+      name: 'Admin - Delete User (soft)',
+      request: { method: 'DELETE', header: [{ key: 'Authorization', value: 'Bearer {{adminToken}}' }], url: '{{baseUrl}}/admin/users/{{userId}}' }
+    },
+    {
+      name: 'Admin - Active Rentals by Location',
+      request: { method: 'GET', header: [{ key: 'Authorization', value: 'Bearer {{adminToken}}' }], url: '{{baseUrl}}/admin/rentals/active?city=KOCHI&preset_location_id=69020a50b6640e9c89d211b8&step=1&limit=20' }
+    },
+    {
+      name: 'Admin - Add Location (protected)',
+      request: { method: 'POST', header: [{ key: 'Content-Type', value: 'application/json' }, { key: 'Authorization', value: 'Bearer {{adminToken}}' }], body: { mode: 'raw', raw: '{\n  "district": "Kochi",\n  "place_name": "Obrone Mall",\n  "city": "Kochi"\n}' }, url: '{{baseUrl}}/locations' }
+    },
+    {
+      name: 'Admin - Delete Location (protected)',
+      request: { method: 'DELETE', header: [{ key: 'Authorization', value: 'Bearer {{adminToken}}' }], url: '{{baseUrl}}/locations/{{presetId}}' }
+    },
+    {
+      name: 'Admin - Add Banner (protected)',
+      request: { method: 'POST', header: [{ key: 'Content-Type', value: 'application/json' }, { key: 'Authorization', value: 'Bearer {{adminToken}}' }], body: { mode: 'raw', raw: '{\n  "title": "New Banner",\n  "image_url": "https://cdn.example.com/banner.jpg",\n  "target_url": "https://example.com",\n  "active": true\n}' }, url: '{{baseUrl}}/banners' }
+    },
+    {
+      name: 'Admin - Delete Banner (protected)',
+      request: { method: 'DELETE', header: [{ key: 'Authorization', value: 'Bearer {{adminToken}}' }], url: '{{baseUrl}}/banners/{{bannerId}}' }
+    }
+  ]
+}

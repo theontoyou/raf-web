@@ -113,10 +113,11 @@ export class ProfileService {
       name: createProfileDto.name,
       dob: createProfileDto.dob,
       bio: createProfileDto.bio,
-      gender: createProfileDto.gender,
+      // store gender and city in lowercase for consistent DB-level comparisons
+      gender: createProfileDto.gender ? String(createProfileDto.gender).toLowerCase() : createProfileDto.gender,
       age,
       images: imageFiles || [],
-      city: createProfileDto.city,
+      city: createProfileDto.city ? String(createProfileDto.city).toLowerCase() : createProfileDto.city,
       // legacy location/coordinates removed; using preset_locations on user root
     } as any;
 
@@ -124,10 +125,15 @@ export class ProfileService {
     if (createProfileDto.profile_photo) user.profile.images = [createProfileDto.profile_photo, ...(user.profile.images || [])];
 
   // Store preset locations on user document as a simple array of objects (may be empty)
-  (user as any).preset_locations = createProfileDto.preset_locations || [];
+  // Normalize preset location names to lowercase for DB-level matching consistency
+  (user as any).preset_locations = (createProfileDto.preset_locations || []).map((p: any) => ({ id: p.id, name: p.name ? String(p.name).toLowerCase() : p.name }));
 
     if (createProfileDto.availability) (user as any).availability = createProfileDto.availability;
-    if (createProfileDto.preferred_gender) (user as any).preferred_gender = createProfileDto.preferred_gender;
+    if (createProfileDto.preferred_gender) {
+      (user as any).preferred_gender = Array.isArray(createProfileDto.preferred_gender)
+        ? createProfileDto.preferred_gender.map((g: any) => String(g).toLowerCase())
+        : [String(createProfileDto.preferred_gender).toLowerCase()];
+    }
     if (createProfileDto.preferred_age_range) (user as any).preferred_age_range = createProfileDto.preferred_age_range;
     if (createProfileDto.personality_traits) (user as any).personality_traits = createProfileDto.personality_traits;
     if (createProfileDto.boundaries) (user as any).boundaries = createProfileDto.boundaries;
@@ -165,15 +171,19 @@ export class ProfileService {
       throw new NotFoundException(ERROR_MESSAGES.PROFILE_NOT_FOUND);
     }
     // Only update provided fields
-    if (updateProfileDto.name) user.profile.name = updateProfileDto.name;
+  if (updateProfileDto.name) user.profile.name = updateProfileDto.name;
     if (updateProfileDto.dob) user.profile.dob = updateProfileDto.dob;
     if (updateProfileDto.bio) user.profile.bio = updateProfileDto.bio;
-    if (updateProfileDto.gender) user.profile.gender = updateProfileDto.gender;
+  if (updateProfileDto.gender) user.profile.gender = String(updateProfileDto.gender).toLowerCase();
     if (Array.isArray(updateProfileDto['images'])) user.profile.images = updateProfileDto['images'];
     if (updateProfileDto.profile_photo) user.profile.images = [updateProfileDto.profile_photo, ...(user.profile.images || [])];
-    if (updateProfileDto.preset_locations) (user as any).preset_locations = updateProfileDto.preset_locations;
+  if (updateProfileDto.preset_locations) (user as any).preset_locations = (updateProfileDto.preset_locations || []).map((p: any) => ({ id: p.id, name: p.name ? String(p.name).toLowerCase() : p.name }));
     if (updateProfileDto.availability) (user as any).availability = updateProfileDto.availability;
-    if (updateProfileDto.preferred_gender) (user as any).preferred_gender = updateProfileDto.preferred_gender;
+    if (updateProfileDto.preferred_gender) {
+      (user as any).preferred_gender = Array.isArray(updateProfileDto.preferred_gender)
+        ? updateProfileDto.preferred_gender.map((g: any) => String(g).toLowerCase())
+        : [String(updateProfileDto.preferred_gender).toLowerCase()];
+    }
     if (updateProfileDto.preferred_age_range) (user as any).preferred_age_range = updateProfileDto.preferred_age_range;
     if (updateProfileDto.personality_traits) (user as any).personality_traits = updateProfileDto.personality_traits;
     if (updateProfileDto.boundaries) (user as any).boundaries = updateProfileDto.boundaries;

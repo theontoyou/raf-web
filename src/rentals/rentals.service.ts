@@ -149,8 +149,11 @@ export class RentalsService {
     }
 
     // Fallback: if MatchesService returned error, attempt a simple city-based fetch (limit 3)
+    // fallback: case-insensitive city match
+    const escapeRegex = (s: string) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cityMatch = new RegExp(`^${escapeRegex(location.city)}$`, 'i');
     const fallback = await this.userModel
-      .find({ _id: { $ne: userId }, 'profile.city': location.city })
+      .find({ _id: { $ne: userId }, 'profile.city': cityMatch })
       .limit(requestedLimit)
       .select('profile.name profile.age profile.images profile.location profile.city preset_locations interests availability status.last_seen');
 
@@ -188,20 +191,113 @@ export class RentalsService {
   // Normalize booking_date to YYYY-MM-DD for comparison/storage
   const bookingDateKey = booking_date ? new Date(booking_date).toISOString().slice(0, 10) : null;
 
-    // Check renter credits
+    // Helper to safely read availability for a weekday (case-insensitive keys and Map support)
+    const getAvailabilityForWeekday = (user: any, weekday: string): number[] => {
+      if (!user || !user.availability) return [];
+      const avail = user.availability as any;
+      // Map-like
+      if (typeof avail.get === 'function') {
+        const v = avail.get(weekday);
+        if (Array.isArray(v)) return v;
+        // fallback: try case-insensitive key match
+        for (const k of avail.keys()) {
+          if (String(k).toLowerCase() === String(weekday).toLowerCase()) {
+            const vv = avail.get(k);
+            return Array.isArray(vv) ? vv : [];
+          }
+        }
+        return [];
+      }
+      // Plain object
+      const keys = Object.keys(avail || {});
+      for (const k of keys) {
+        if (String(k).toLowerCase() === String(weekday).toLowerCase()) {
+          const vv = avail[k];
+          return Array.isArray(vv) ? vv : [];
+        }
+      }
+      return [];
+    };
+
+    // Check renter exists
     const renter = await this.userModel.findById(renter_id);
     if (!renter) {
       throw new NotFoundException('Renter not found');
     }
 
-    if (renter.credits.balance < credits_used) {
+  // credits_used can be omitted; default to 0
+  const credits = typeof credits_used === 'number' ? Math.max(0, Math.floor(credits_used)) : 0;
+    if (!renter.credits || typeof renter.credits.balance !== 'number') renter.credits = { balance: 0, spent: 0 } as any;
+    if (renter.credits.balance < credits) {
       throw new BadRequestException('Insufficient credits');
     }
 
-    // Check host availability
+    // Check host exists
     const host = await this.userModel.findById(host_id);
     if (!host) {
       throw new NotFoundException('Host not found');
+    }
+
+    // Validate booking_hour presence and range
+    if (typeof booking_hour !== 'number' || booking_hour < 0 || booking_hour > 23) {
+      throw new BadRequestException('booking_hour must be a number between 0 and 23');
+    }
+
+    // Check availability for both renter and host for the weekday
+    // Derive weekday from booking_date (YYYY-MM-DD) using UTC to avoid timezone shifts
+    const getWeekdayFromDateString = (dateStr: string | undefined | null): string | null => {
+      if (!dateStr) return null;
+      const parts = String(dateStr).split('-').map((s) => parseInt(s, 10));
+      if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null;
+      const [y, m, d] = parts;
+      // Use server-side IST (UTC+5:30) as requested to determine the weekday
+      // Create a UTC midnight for the date, then shift by IST offset (5.5 hours)
+      const utcMidnight = Date.UTC(y, m - 1, d);
+      const istOffsetMs = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in ms
+      const istTime = new Date(utcMidnight + istOffsetMs);
+      const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return names[istTime.getUTCDay()] || null;
+    };
+
+    const wkday = getWeekdayFromDateString(booking_date);
+    // debug: log resolved weekday for booking_date (helpful when client reports availability mismatches)
+    // console.debug && console.debug(`Resolved booking_date=${booking_date} to weekday=${wkday}`);
+    if (!wkday) {
+      throw new BadRequestException('Invalid booking_date');
+    }
+
+    const hostAvail = getAvailabilityForWeekday(host, wkday);
+    const renterAvail = getAvailabilityForWeekday(renter, wkday);
+
+    // Debugging: print resolved weekday and availability details to help diagnose mismatches.
+    // This log is intentionally verbose for debugging — remove or guard behind a DEBUG flag in production.
+    try {
+      console.log('DEBUG confirmRental:', {
+        booking_date,
+        bookingDateKey,
+        resolved_weekday: wkday,
+        booking_hour,
+        host_availability_raw: host ? (host.availability || null) : null,
+        renter_availability_raw: renter ? (renter.availability || null) : null,
+        host_availability_resolved: hostAvail,
+        renter_availability_resolved: renterAvail,
+      });
+    } catch (e) {
+      // ignore logging errors
+    }
+
+    if (!hostAvail || !Array.isArray(hostAvail) || !hostAvail.includes(booking_hour)) {
+      throw new BadRequestException('Host is not available at the requested booking hour');
+    }
+
+    // NOTE: renter availability is not enforced when the renter initiates the booking.
+    // We still keep the conflict check below (which prevents double-booking), but
+    // do not reject confirmations based on the renter's availability schedule.
+    if (!renterAvail || !Array.isArray(renterAvail) || !renterAvail.includes(booking_hour)) {
+      // Log a debug note but do not throw — renter chose to initiate despite schedule
+      try {
+        console.log('DEBUG confirmRental: renter not marked available for this weekday/hour but initiation accepted by renter');
+      } catch (e) {}
     }
 
     // Ensure neither renter nor host already has an active rental for the same date+hour
@@ -225,14 +321,15 @@ export class RentalsService {
     const host_otp = Math.floor(1000 + Math.random() * 9000).toString();
     const common_otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    // Create rental
-    const rental = await this.rentalModel.create({
+  // Create rental
+  const rental = await this.rentalModel.create({
       renter_id,
       host_id,
       location: {
-        city: location.city,
+        // store normalized values for consistency
+        city: location.city ? String(location.city).toLowerCase() : location.city,
         preset_location_id: location.preset_location_id,
-        preset_location_name: location.preset_location_name,
+        preset_location_name: location.preset_location_name ? String(location.preset_location_name).toLowerCase() : location.preset_location_name,
       },
   booking_date: bookingDateKey,
   booking_hour,
@@ -245,13 +342,13 @@ export class RentalsService {
         verified: false,
       },
       duration_hours,
-      credits_used,
+  credits_used: credits,
       created_at: new Date(),
     });
 
-    // Deduct credits
-    renter.credits.balance -= credits_used;
-    renter.credits.spent += credits_used;
+  // Deduct credits (use normalized `credits` value)
+  renter.credits.balance -= credits;
+  renter.credits.spent += credits;
     await renter.save();
 
     // Add active booking entries to both renter and host user documents and set is_on_rent if booking is for today
@@ -323,8 +420,11 @@ export class RentalsService {
    * Get user orders grouped into active, finished and past rentals.
    * Pagination: step (page index starting at 0) and limit (items per page) apply to each group.
    */
-  async getUserOrders(userId: string, step = 0, limit = 10) {
-    const skip = Math.max(0, Math.floor(step)) * Math.max(1, Math.floor(limit));
+  async getUserOrders(userId: string, step = 1, limit = 10) {
+    // Treat `step` as a 1-based page index (step=1 => first page).
+    const pageIndex = Math.max(1, Math.floor(step));
+    const pageLimit = Math.max(1, Math.floor(limit));
+    const skip = (pageIndex - 1) * pageLimit;
 
     // Define statuses
     const activeStatuses = ['pending', 'confirmed', 'in-progress'];
@@ -340,7 +440,7 @@ export class RentalsService {
         })
         .sort({ created_at: -1 })
         .skip(skip)
-        .limit(Math.max(1, Math.floor(limit)))
+        .limit(pageLimit)
         .lean();
     };
 
@@ -412,8 +512,9 @@ export class RentalsService {
     return {
       status: 'success',
       msg: 'User orders fetched',
-      step,
-      limit,
+      // return the normalized, 1-based page index and the effective limit
+      step: pageIndex,
+      limit: pageLimit,
       totals: { active: totalActive, finished: totalFinished, past: totalPast },
       active: activeMapped,
       finished: finishedMapped,

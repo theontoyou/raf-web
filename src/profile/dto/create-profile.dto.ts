@@ -24,6 +24,16 @@ class PresetLocationDto {
   name: string;
 }
 
+class AgeRangeDto {
+  @IsNumber()
+  @Min(0)
+  min: number;
+
+  @IsNumber()
+  @Min(0)
+  max: number;
+}
+
 export class CreateProfileDto {
   // Legacy alias: some clients still send display_name instead of name
   @IsOptional()
@@ -87,11 +97,9 @@ export class CreateProfileDto {
   preferred_gender?: string; // male/female/any
 
   @IsOptional()
-  @IsObject()
-  preferred_age_range?: {
-    min: number;
-    max: number;
-  };
+  @ValidateNested()
+  @Type(() => AgeRangeDto)
+  preferred_age_range?: AgeRangeDto;
 
   @IsOptional()
   @IsArray()
