@@ -75,3 +75,15 @@ export class Rental {
 export const RentalSchema = SchemaFactory.createForClass(Rental);
 
 // Indexes are defined using @Prop decorators above
+
+// Normalize location fields on save to lowercase to avoid case mismatches
+RentalSchema.pre('save', function (next) {
+  try {
+    if (this.location) {
+      if (this.location.city) this.location.city = String(this.location.city).trim().toLowerCase();
+      if (this.location.preset_location_id) this.location.preset_location_id = String(this.location.preset_location_id).trim().toLowerCase();
+      if (this.location.preset_location_name) this.location.preset_location_name = String(this.location.preset_location_name).trim().toLowerCase();
+    }
+  } catch (e) {}
+  next();
+});

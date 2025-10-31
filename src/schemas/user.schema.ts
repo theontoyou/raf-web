@@ -199,7 +199,8 @@ export class User {
   availability: Map<string, number[]> | Record<string, number[]>;
 
   @Prop()
-  preferred_gender: string;
+  @Prop({ type: [String] })
+  preferred_gender: string[];
 
   @Prop({ type: { min: Number, max: Number } })
   preferred_age_range: { min: number; max: number };
@@ -249,3 +250,30 @@ UserSchema.index({ 'profile.gender': 1 });
 UserSchema.index({ 'profile.preferred_gender': 1 });
 UserSchema.index({ 'traits.openness': 1 });
 UserSchema.index({ 'traits.extroversion': 1 });
+
+// Ensure certain fields are normalized at save-time to avoid case-mismatch issues
+UserSchema.pre('save', function (next) {
+  try {
+    // `this` is the document
+    // normalize profile.city to lowercase
+    if (this.profile && this.profile.city) {
+      this.profile.city = String(this.profile.city).trim().toLowerCase();
+    }
+
+    // normalize preset_locations ids and names to lowercase
+    if (Array.isArray(this.preset_locations)) {
+      this.preset_locations = this.preset_locations.map((p: any) => ({
+        id: p && p.id ? String(p.id).trim().toLowerCase() : p && p.id,
+        name: p && p.name ? String(p.name).trim().toLowerCase() : p && p.name,
+      }));
+    }
+
+    // normalize email if present
+    if (this.auth && this.auth.email) {
+      this.auth.email = String(this.auth.email).trim().toLowerCase();
+    }
+  } catch (e) {
+    // swallow errors - normalization is best-effort
+  }
+  next();
+});

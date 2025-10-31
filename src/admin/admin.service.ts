@@ -63,16 +63,16 @@ export class AdminService {
         user.profile = (user.profile as any) || ({} as any);
         (user.profile as any).name = name;
       }
-  if (email) (user.auth as any).email = email;
-  if (password) (user.auth as any).password = this.hashPassword(password);
+      if (email) (user.auth as any).email = email;
+      if (password) (user.auth as any).password = this.hashPassword(password);
       await user.save();
       return user;
     }
 
-  const auth: any = { created_at: new Date(), otp_verified: false };
-  if (mobile_number) auth.mobile_number = mobile_number;
-  if (email) auth.email = email;
-  if (password) auth.password = this.hashPassword(password);
+    const auth: any = { created_at: new Date(), otp_verified: false };
+    if (mobile_number) auth.mobile_number = mobile_number;
+    if (email) auth.email = email;
+    if (password) auth.password = this.hashPassword(password);
 
     user = await this.userModel.create({
       auth,
@@ -272,33 +272,165 @@ export class AdminService {
       }
     }
 
-    const userMatch: any = { is_deleted: { $ne: true } };
-    if (sinceDate) userMatch.created_at = { $gte: sinceDate };
+    // Helper: some older records use string timestamps for created_at. If the schema
+    // defines created_at as String, convert the Date to ISO string before querying.
+    const normalizeDateForModel = (model: any, date: Date) => {
+      if (!date) return date;
+      try {
+        const path: any = model && model.schema ? model.schema.path('created_at') : null;
+        if (path && path.instance === 'String') return date.toISOString();
+      } catch (e) {
+        // ignore and fallback to Date
+      }
+      return date;
+    };
 
-    const [usersCount, hostsDistinct, activeRentalsCount, pendingRentalsCount, creditsAgg, revenueAgg] = await Promise.all([
-      this.userModel.countDocuments(userMatch),
-      this.rentalModel.distinct('host_id', sinceDate ? { created_at: { $gte: sinceDate } } : {}).then((arr: any[]) => (arr || []).length),
-      this.rentalModel.countDocuments({ status: { $in: ['pending', 'confirmed', 'in-progress'], ...(sinceDate ? { created_at: { $gte: sinceDate } } : {}) } }),
-      this.rentalModel.countDocuments({ status: 'pending', ...(sinceDate ? { created_at: { $gte: sinceDate } } : {}) }),
-      this.userModel.aggregate([{ $match: { is_deleted: { $ne: true }, ...(sinceDate ? { created_at: { $gte: sinceDate } } : {}) } }, { $group: { _id: null, total: { $sum: '$credits.balance' } } }]),
-      this.rentalModel.aggregate([{ $match: { ...(sinceDate ? { created_at: { $gte: sinceDate } } : {}) } }, { $group: { _id: null, total: { $sum: '$credits_used' } } }]),
+    // Default period days (used to compute previous period) - if period not provided default to 30 days
+    const defaultPeriodDays = 30;
+    let periodDays = defaultPeriodDays;
+    if (period && !since) {
+      const m = String(period).match(/^(\d+)d$/);
+      if (m) periodDays = parseInt(m[1], 10);
+    }
+
+    // current window: sinceDate -> now (or last `periodDays` if sinceDate not provided)
+    const now = new Date();
+    const currentSince = sinceDate || new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
+    const prevSince = new Date(currentSince.getTime() - periodDays * 24 * 60 * 60 * 1000);
+
+    const rentalCurrentMatch: any = { ...(currentSince ? { created_at: { $gte: normalizeDateForModel(this.rentalModel, currentSince) } } : {}) };
+    const rentalPrevMatch: any = { created_at: { $gte: normalizeDateForModel(this.rentalModel, prevSince), $lt: normalizeDateForModel(this.rentalModel, currentSince) } };
+
+    const userCurrentMatch: any = { is_deleted: { $ne: true }, ...(currentSince ? { created_at: { $gte: normalizeDateForModel(this.userModel, currentSince) } } : {}) };
+    const userPrevMatch: any = { is_deleted: { $ne: true }, created_at: { $gte: normalizeDateForModel(this.userModel, prevSince), $lt: normalizeDateForModel(this.userModel, currentSince) } };
+
+    // Run aggregations in parallel for current and previous windows
+    const [
+      usersCount,
+      usersPrevCount,
+      hostsDistinct,
+      hostsPrevDistinct,
+      activeRentalsCount,
+      activeRentalsPrevCount,
+      pendingRentalsCount,
+      pendingRentalsPrevCount,
+      creditsAgg,
+      creditsPrevAgg,
+      revenueAgg,
+      revenuePrevAgg,
+    ] = await Promise.all([
+      this.userModel.countDocuments(userCurrentMatch),
+      this.userModel.countDocuments(userPrevMatch),
+      this.rentalModel.distinct('host_id', currentSince ? rentalCurrentMatch : {}).then((arr: any[]) => (arr || []).length),
+      this.rentalModel.distinct('host_id', rentalPrevMatch).then((arr: any[]) => (arr || []).length),
+  // Ensure created_at/date filters are applied at top-level, not nested inside `status`.
+  this.rentalModel.countDocuments({ status: { $in: ['pending', 'confirmed', 'in-progress'] }, ...(currentSince ? rentalCurrentMatch : {}) }),
+  this.rentalModel.countDocuments({ status: { $in: ['pending', 'confirmed', 'in-progress'] }, ...(rentalPrevMatch || {}) }),
+      this.rentalModel.countDocuments({ status: 'pending', ...(currentSince ? rentalCurrentMatch : {}) }),
+      this.rentalModel.countDocuments({ status: 'pending', ...(rentalPrevMatch || {}) }),
+      this.userModel.aggregate([{ $match: userCurrentMatch }, { $group: { _id: null, total: { $sum: '$credits.balance' } } }]),
+      this.userModel.aggregate([{ $match: userPrevMatch }, { $group: { _id: null, total: { $sum: '$credits.balance' } } }]),
+      this.rentalModel.aggregate([{ $match: rentalCurrentMatch }, { $group: { _id: null, total: { $sum: '$credits_used' } } }]),
+      this.rentalModel.aggregate([{ $match: rentalPrevMatch }, { $group: { _id: null, total: { $sum: '$credits_used' } } }]),
     ]);
 
-    const credits_balance = creditsAgg && creditsAgg[0] ? creditsAgg[0].total : 0;
-    const revenue = revenueAgg && revenueAgg[0] ? revenueAgg[0].total : 0;
+  const credits_balance = creditsAgg && creditsAgg[0] ? creditsAgg[0].total : 0;
+  const credits_prev = creditsPrevAgg && creditsPrevAgg[0] ? creditsPrevAgg[0].total : 0;
+  const revenue = revenueAgg && revenueAgg[0] ? revenueAgg[0].total : 0;
+  const revenue_prev = revenuePrevAgg && revenuePrevAgg[0] ? revenuePrevAgg[0].total : 0;
 
-    return {
+  // overall/all-time aggregates (run separately to keep the period-based queries compact)
+  const [
+    usersAllCount,
+    hostsAllDistinct,
+    activeRentalsAllCount,
+    pendingRentalsAllCount,
+    creditsAllAgg,
+    revenueAllAgg,
+  ] = await Promise.all([
+    this.userModel.countDocuments({ is_deleted: { $ne: true } }),
+    this.rentalModel.distinct('host_id', {}).then((arr: any[]) => (arr || []).length),
+    this.rentalModel.countDocuments({ status: { $in: ['pending', 'confirmed', 'in-progress'] } }),
+    this.rentalModel.countDocuments({ status: 'pending' }),
+    this.userModel.aggregate([{ $group: { _id: null, total: { $sum: '$credits.balance' } } }]),
+    this.rentalModel.aggregate([{ $group: { _id: null, total: { $sum: '$credits_used' } } }]),
+  ]);
+
+  const users_all = usersAllCount || 0;
+  const hosts_all = hostsAllDistinct || 0;
+  const active_rentals_all = activeRentalsAllCount || 0;
+  const pending_rentals_all = pendingRentalsAllCount || 0;
+  const credits_all = creditsAllAgg && creditsAllAgg[0] ? creditsAllAgg[0].total : 0;
+  const revenue_all = revenueAllAgg && revenueAllAgg[0] ? revenueAllAgg[0].total : 0;
+
+    const pct = (prev: number, cur: number) => {
+      if (!prev && !cur) return 0;
+      if (!prev) return 100; // previously zero, now some value -> 100% increase
+      return Math.round(((cur - prev) / prev) * 100);
+    };
+
+    const totals = {
+      // period-based totals (existing behavior)
       users: usersCount,
       hosts: hostsDistinct || 0,
       active_rentals: activeRentalsCount || 0,
       pending_rentals: pendingRentalsCount || 0,
       credits_balance,
       revenue,
+      // overall / all-time snapshot (useful for UI showing total users/hosts)
+      overall: {
+        users: users_all,
+        hosts: hosts_all,
+        active_rentals: active_rentals_all,
+        pending_rentals: pending_rentals_all,
+        credits_balance: credits_all,
+        revenue: revenue_all,
+      },
     };
+
+    const deltas = {
+      users: pct(usersPrevCount || 0, usersCount || 0),
+      hosts: pct(hostsPrevDistinct || 0, hostsDistinct || 0),
+      active_rentals: pct(activeRentalsPrevCount || 0, activeRentalsCount || 0),
+      pending_rentals: pct(pendingRentalsPrevCount || 0, pendingRentalsCount || 0),
+      credits_balance: pct(credits_prev || 0, credits_balance || 0),
+      revenue: pct(revenue_prev || 0, revenue || 0),
+    };
+
+    return { totals, deltas };
   }
 
-  async getRecentRentals(limit = 5) {
-    const rentals = await this.rentalModel.find({}).sort({ created_at: -1 }).limit(limit).lean();
+  async getRecentRentals(filters: any = {}, step = 1, limit = 5) {
+    const pageIndex = Math.max(1, Math.floor(step));
+    const pageLimit = Math.max(1, Math.floor(limit));
+    const skip = (pageIndex - 1) * pageLimit;
+
+    const query: any = {};
+    const escapeRegex = (s: string) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (filters.city) query['location.city'] = new RegExp(`^${escapeRegex(filters.city)}$`, 'i');
+    if (filters.preset_location_id) query['location.preset_location_id'] = String(filters.preset_location_id);
+    if (filters.booking_date) query.booking_date = String(filters.booking_date);
+    if (filters.renter_id) query.renter_id = String(filters.renter_id);
+    if (filters.host_id) query.host_id = String(filters.host_id);
+
+    // allow searching by renter/host name (resolve to ids)
+    if (filters.renter_name) {
+      const nameRegex = new RegExp(escapeRegex(String(filters.renter_name).trim()), 'i');
+      const matched = await this.userModel.find({ 'profile.name': nameRegex }).select('_id').limit(100).lean();
+      if (!matched || matched.length === 0) return [];
+      const ids = matched.map((m: any) => String(m._id));
+      query.renter_id = { $in: ids };
+    }
+
+    if (filters.host_name) {
+      const nameRegex = new RegExp(escapeRegex(String(filters.host_name).trim()), 'i');
+      const matchedHosts = await this.userModel.find({ 'profile.name': nameRegex }).select('_id').limit(100).lean();
+      if (!matchedHosts || matchedHosts.length === 0) return [];
+  const hostIds = matchedHosts.map((m: any) => String(m._id));
+      query.host_id = { $in: hostIds };
+    }
+
+    const rentals = await this.rentalModel.find(query).sort({ created_at: -1 }).skip(skip).limit(pageLimit).lean();
     if (!rentals || !rentals.length) return [];
     const userIds = new Set<string>();
     for (const r of rentals) {
@@ -325,8 +457,37 @@ export class AdminService {
     }));
   }
 
-  async getPendingRentals(limit = 20) {
-    const rentals = await this.rentalModel.find({ status: 'pending' }).sort({ created_at: -1 }).limit(limit).lean();
+  async getPendingRentals(filters: any = {}, step = 1, limit = 20) {
+    const pageIndex = Math.max(1, Math.floor(step));
+    const pageLimit = Math.max(1, Math.floor(limit));
+    const skip = (pageIndex - 1) * pageLimit;
+
+    const query: any = { status: 'pending' };
+    const escapeRegex = (s: string) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (filters.city) query['location.city'] = new RegExp(`^${escapeRegex(filters.city)}$`, 'i');
+    if (filters.preset_location_id) query['location.preset_location_id'] = String(filters.preset_location_id);
+    if (filters.booking_date) query.booking_date = String(filters.booking_date);
+    if (filters.renter_id) query.renter_id = String(filters.renter_id);
+    if (filters.host_id) query.host_id = String(filters.host_id);
+
+    // allow searching by renter/host name (resolve to ids)
+    if (filters.renter_name) {
+      const nameRegex = new RegExp(escapeRegex(String(filters.renter_name).trim()), 'i');
+      const matched = await this.userModel.find({ 'profile.name': nameRegex }).select('_id').limit(100).lean();
+      if (!matched || matched.length === 0) return [];
+      const ids = matched.map((m: any) => String(m._id));
+      query.renter_id = { $in: ids };
+    }
+
+    if (filters.host_name) {
+      const nameRegex = new RegExp(escapeRegex(String(filters.host_name).trim()), 'i');
+      const matchedHosts = await this.userModel.find({ 'profile.name': nameRegex }).select('_id').limit(100).lean();
+      if (!matchedHosts || matchedHosts.length === 0) return [];
+      const hostIds = matchedHosts.map((m: any) => String(m._id));
+      query.host_id = { $in: hostIds };
+    }
+
+    const rentals = await this.rentalModel.find(query).sort({ created_at: -1 }).skip(skip).limit(pageLimit).lean();
     if (!rentals || !rentals.length) return [];
     const userIds = new Set<string>();
     for (const r of rentals) {
@@ -413,5 +574,110 @@ export class AdminService {
     ];
     const series = await this.userModel.aggregate(pipeline as any);
     return series.map((s: any) => ({ date: s.date, count: s.count }));
+  }
+
+  /**
+   * Get active user counts by city (paginated) or time-series when group_by is provided.
+   * Definition of active: user.is_on_rent === true OR status.last_seen within the range window.
+   * Params:
+   *  - opts.city?: string -> limit to a single city
+   *  - opts.range?: string -> e.g. '30d' (used to compute sinceDate)
+   *  - opts.group_by?: 'day' -> return series for the given city (or all cities if no city?)
+   */
+  async getActiveUsers(opts: { city?: string; range?: string; group_by?: string } = {}, step = 1, limit = 20) {
+    const { city, range, group_by } = opts;
+    // compute sinceDate from range (e.g. 30d)
+    let sinceDate: Date | undefined;
+    if (range) {
+      const m = String(range).match(/^(\d+)d$/);
+      if (m) {
+        const days = parseInt(m[1], 10);
+        sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      }
+    } else {
+      // default: 30 days
+      sinceDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    // If group_by specified, return a time-series of active-user counts (grouped by day)
+    if (group_by === 'day') {
+      // If city provided, filter by city; else aggregate across all cities
+      const match: any = { is_deleted: { $ne: true } };
+      // exclude admin accounts from active-user analytics
+      match.role = { $ne: 'admin' };
+      if (city) {
+        match['profile.city'] = new RegExp(`^${String(city).replace(/[.*+?^${}()|[\\]\]/g, '\\$&')}$`, 'i');
+      } else {
+        // ignore unknown/empty/null city values when no city filter is provided
+        match['profile.city'] = { $nin: ['unknown', '', null] };
+      }
+      // active when is_on_rent true OR status.last_seen >= sinceDate
+      match.$or = [{ is_on_rent: true }, { 'status.last_seen': { $gte: sinceDate } }];
+
+      const fmt = '%Y-%m-%d';
+      const pipeline: any[] = [
+        { $match: match },
+        { $group: { _id: { $dateToString: { format: fmt, date: '$status.last_seen' } }, count: { $sum: 1 } } },
+        { $project: { date: '$_id', count: 1, _id: 0 } },
+        { $sort: { date: 1 } },
+      ];
+
+      const series = await this.userModel.aggregate(pipeline as any);
+      return series.map((s: any) => ({ date: s.date, count: s.count }));
+    }
+
+    // Otherwise return counts grouped by city (paginated)
+    const match: any = { is_deleted: { $ne: true } };
+    match.$or = [{ is_on_rent: true }];
+    if (sinceDate) match.$or.push({ 'status.last_seen': { $gte: sinceDate } });
+    // exclude admin accounts
+    match.role = { $ne: 'admin' };
+    if (city) {
+      match['profile.city'] = new RegExp(`^${String(city).replace(/[.*+?^${}()|[\\]\]/g, '\\$&')}$`, 'i');
+    } else {
+      // ignore unknown/empty/null city values when no city filter is provided
+      match['profile.city'] = { $nin: ['unknown', '', null] };
+    }
+
+    const pageIndex = Math.max(1, Math.floor(step));
+    const pageLimit = Math.max(1, Math.floor(limit));
+    const skip = (pageIndex - 1) * pageLimit;
+
+    const pipeline: any[] = [
+      { $match: match },
+      // group by lowercased city to make grouping case-insensitive
+      { $group: { _id: { $toLower: { $ifNull: ['$profile.city', 'unknown'] } }, count: { $sum: 1 } } },
+      // produce a display-friendly city (capitalized first letter) from the lowercased key
+      {
+        $project: {
+          _id: 0,
+          cityLower: '$_id',
+          count: 1,
+        },
+      },
+      {
+        $project: {
+          city: {
+            $concat: [
+              { $toUpper: { $substrCP: ['$cityLower', 0, 1] } },
+              { $substrCP: ['$cityLower', 1, { $subtract: [{ $strLenCP: '$cityLower' }, 1] }] },
+            ],
+          },
+          count: 1,
+        },
+      },
+      { $sort: { count: -1, city: 1 } },
+      { $skip: skip },
+      { $limit: pageLimit },
+    ];
+
+    const results = await this.userModel.aggregate(pipeline as any);
+    // If city provided then return single count
+    if (city) {
+      const c = results && results[0] ? results[0].count : 0;
+      return { city: city, count: c };
+    }
+
+    return { page: pageIndex, limit: pageLimit, items: results };
   }
 }

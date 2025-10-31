@@ -38,3 +38,16 @@ LocationSchema.pre('save', function (next) {
   }
   next();
 });
+
+// normalize fields to lowercase to avoid case-sensitivity issues
+LocationSchema.pre('save', function (next) {
+  try {
+    if (this.place_name) this.place_name = String(this.place_name).trim().toLowerCase();
+    if (this.city) this.city = String(this.city).trim().toLowerCase();
+    if (this.preset_location_id) this.preset_location_id = String(this.preset_location_id).trim().toLowerCase();
+    if (this.district) this.district = String(this.district).trim().toLowerCase();
+  } catch (e) {
+    // ignore errors
+  }
+  next();
+});

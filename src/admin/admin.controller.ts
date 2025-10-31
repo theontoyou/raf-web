@@ -85,22 +85,45 @@ export class AdminController {
   @UseGuards(JwtAuthGuard, AdminGuard)
   async getDashboardSummary(@Query('since') since?: string, @Query('period') period?: string) {
     const resp = await this.adminService.getDashboardSummary({ since, period });
-    return { status: 'success', totals: resp };
+    // resp contains { totals, deltas }
+    return { status: 'success', totals: resp.totals, deltas: resp.deltas };
   }
 
   @Get('rentals/recent')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async getRecentRentals(@Query('limit') limit?: string) {
+  async getRecentRentals(
+    @Query('city') city?: string,
+    @Query('preset_location_id') preset_location_id?: string,
+    @Query('booking_date') booking_date?: string,
+    @Query('renter_id') renter_id?: string,
+    @Query('host_id') host_id?: string,
+    @Query('renter_name') renter_name?: string,
+    @Query('host_name') host_name?: string,
+    @Query('step') step?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const s = step ? parseInt(step, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 5;
-    const resp = await this.adminService.getRecentRentals(l);
+    const resp = await this.adminService.getRecentRentals({ city, preset_location_id, booking_date, renter_id, host_id, renter_name, host_name }, s, l);
     return { status: 'success', rentals: resp };
   }
 
   @Get('rentals/pending')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async getPendingRentals(@Query('limit') limit?: string) {
+  async getPendingRentals(
+    @Query('city') city?: string,
+    @Query('preset_location_id') preset_location_id?: string,
+    @Query('booking_date') booking_date?: string,
+    @Query('renter_id') renter_id?: string,
+    @Query('host_id') host_id?: string,
+    @Query('renter_name') renter_name?: string,
+    @Query('host_name') host_name?: string,
+    @Query('step') step?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const s = step ? parseInt(step, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 20;
-    const resp = await this.adminService.getPendingRentals(l);
+    const resp = await this.adminService.getPendingRentals({ city, preset_location_id, booking_date, renter_id, host_id, renter_name, host_name }, s, l);
     return { status: 'success', rentals: resp };
   }
 
@@ -137,5 +160,20 @@ export class AdminController {
   async getUserSeries(@Query('range') range?: string, @Query('group_by') group_by?: string) {
     const resp = await this.adminService.getUserSeries({ range, group_by });
     return { status: 'success', series: resp };
+  }
+
+  @Get('analytics/active-users')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getActiveUsers(
+    @Query('city') city?: string,
+    @Query('range') range?: string,
+    @Query('group_by') group_by?: string,
+    @Query('step') step?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const s = step ? parseInt(step, 10) : 1;
+    const l = limit ? parseInt(limit, 10) : 20;
+    const resp = await this.adminService.getActiveUsers({ city, range, group_by }, s, l);
+    return { status: 'success', data: resp };
   }
 }

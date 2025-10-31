@@ -25,6 +25,11 @@ const cleanPhone = (v: any) => {
   return s;
 };
 
+const lower = (s: any) => {
+  if (s === undefined || s === null) return s;
+  return String(s).trim().toLowerCase();
+};
+
 async function main() {
   console.log('Connecting to', MONGODB_URI);
   await mongoose.connect(MONGODB_URI, { dbName: undefined } as any);
@@ -54,16 +59,16 @@ async function main() {
         const cleaned = clean(doc.profile.name);
         if (cleaned !== doc.profile.name) updates['profile.name'] = cleaned;
       }
-      // profile.city
+      // profile.city -> normalize to lowercase
       if (doc?.profile?.city) {
-        const cleaned = clean(doc.profile.city);
+        const cleaned = lower(clean(doc.profile.city));
         if (cleaned !== doc.profile.city) updates['profile.city'] = cleaned;
       }
       // preset_locations array
       if (Array.isArray(doc?.preset_locations)) {
         const pl = doc.preset_locations.map((p: any) => ({
-          id: p?.id ? clean(String(p.id)) : p.id,
-          name: p?.name ? clean(String(p.name)) : p.name,
+          id: p?.id ? lower(clean(String(p.id))) : p.id,
+          name: p?.name ? lower(clean(String(p.name))) : p.name,
         }));
         // Compare as JSON
         if (JSON.stringify(pl) !== JSON.stringify(doc.preset_locations)) updates['preset_locations'] = pl;
@@ -96,15 +101,15 @@ async function main() {
       const updates: any = {};
       try {
         if (doc?.place_name) {
-          const cleaned = clean(doc.place_name);
+          const cleaned = lower(clean(doc.place_name));
           if (cleaned !== doc.place_name) updates['place_name'] = cleaned;
         }
         if (doc?.city) {
-          const cleaned = clean(doc.city);
+          const cleaned = lower(clean(doc.city));
           if (cleaned !== doc.city) updates['city'] = cleaned;
         }
         if (doc?.preset_location_id) {
-          const cleaned = clean(doc.preset_location_id);
+          const cleaned = lower(clean(doc.preset_location_id));
           if (cleaned !== doc.preset_location_id) updates['preset_location_id'] = cleaned;
         }
         if (Object.keys(updates).length) {

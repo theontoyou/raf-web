@@ -45,8 +45,7 @@
             "body": { "mode": "raw", "raw": "{\n  \"mobile_number\": \"<new_admin_mobile>\",\n  \"name\": \"Admin Name\"\n}" },
             "url": "{{baseUrl}}/admin/create"
           }
-        }
-        ,
+        },
         {
           "name": "Admin - Login (email)",
           "request": {
@@ -166,7 +165,35 @@
             "body": { "mode": "raw", "raw": "{}" },
             "url": { "raw": "{{baseUrl}}/admin/rentals/{{rentalId}}/complete", "host": ["{{baseUrl}}"], "path": ["admin", "rentals", "{{rentalId}}", "complete"] }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Admin - Locations",
+      "item": [
+        {
+          "name": "Admin - Add Location (protected)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"district\": \"Kochi\",\n  \"place_name\": \"Obrone Mall\",\n  \"city\": \"Kochi\"\n}" },
+            "url": "{{baseUrl}}/locations"
+          }
+        }
+        ,
+        {
+          "name": "Admin - Delete Location (protected)",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": "{{baseUrl}}/locations/{{presetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Analytics",
+      "item": [
         {
           "name": "Admin - Rentals Analytics (series)",
           "request": {
@@ -182,27 +209,21 @@
             "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
             "url": { "raw": "{{baseUrl}}/admin/analytics/users?range=30d&group_by=day", "host": ["{{baseUrl}}"], "path": ["admin", "analytics", "users"] }
           }
-        }
-      ]
-    },
-    {
-      "name": "Admin - Locations",
-      "item": [
+        },
         {
-          "name": "Admin - Add Location (protected)",
+          "name": "Admin - Active Users (by city / series)",
           "request": {
-            "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"district\": \"Kochi\",\n  \"place_name\": \"Obrone Mall\",\n  \"city\": \"Kochi\"\n}" },
-            "url": "{{baseUrl}}/locations"
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/admin/analytics/active-users?range=30d&group_by=day", "host": ["{{baseUrl}}"], "path": ["admin", "analytics", "active-users"] }
           }
         },
         {
-          "name": "Admin - Delete Location (protected)",
+          "name": "Admin - Dashboard Summary",
           "request": {
-            "method": "DELETE",
+            "method": "GET",
             "header": [ { "key": "Authorization", "value": "Bearer {{adminToken}}" } ],
-            "url": "{{baseUrl}}/locations/{{presetId}}"
+            "url": { "raw": "{{baseUrl}}/admin/dashboard/summary", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard", "summary"] }
           }
         }
       ]
